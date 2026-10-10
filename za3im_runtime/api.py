@@ -6,9 +6,10 @@ import hmac
 import json
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from .config import ConfigurationError, RuntimeConfig
+from .context_catalog import ContextCatalog
 from .provider import OpenAIResponsesClient
 from .service import Za3imService
 from .store import ExecutionStore
@@ -20,7 +21,10 @@ def make_handler(
     service: Za3imService,
     api_token: str = "",
     max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
+    context_catalog: ContextCatalog | None = None,
 ):
+    catalog = context_catalog or ContextCatalog()
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "Za3im/0.1"
 
@@ -46,7 +50,8 @@ def make_handler(
             return False
 
         def do_GET(self):  # noqa: N802
-            path = urlsplit(self.path).path
+            url_parts = urlsplit(self.path)
+            path = url_parts.path
             if path == "/healthz":
                 self._send_json(200, {
                     "status": "ok",
@@ -56,6 +61,26 @@ def make_handler(
                 })
                 return
             if not self._require_auth():
+                return
+            if path == "/v1/context/sources":
+                domains = parse_qs(url_parts.query, keep_blank_values=True).get("domain", [])
+                if len(domains) > 1 or (domains and not domains[0]):
+                    self._send_json(400, {"error": {"code": "INVALID_CONTEXT_DOMAIN", "message": "Supply at most one non-empty domain filter"}})
+                    return
+                try:
+                    response = catalog.list_sources(domain=domains[0] if domains else None)
+                except ValueError as exc:
+                    self._send_json(400, {"error": {"code": "INVALID_CONTEXT_DOMAIN", "message": str(exc)}})
+                    return
+                self._send_json(200, response)
+                return
+            match = re.fullmatch(r"/v1/context/sources/([a-z0-9][a-z0-9.-]{1,127})", path)
+            if match:
+                source = catalog.get_source(match.group(1))
+                if source is None:
+                    self._send_json(404, {"error": {"code": "CONTEXT_SOURCE_NOT_FOUND", "message": "Context source not found"}})
+                else:
+                    self._send_json(200, source)
                 return
             if path == "/v1/capabilities":
                 self._send_json(200, service.capabilities())
