@@ -4,19 +4,23 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
+from .config import ConfigurationError, RuntimeConfig
 from .provider import OpenAIResponsesClient
 from .service import Za3imService
 from .store import ExecutionStore
 
-MAX_BODY_BYTES = int(os.getenv("ZA3IM_API_MAX_BODY_BYTES", str(1024 * 1024)))
+DEFAULT_MAX_BODY_BYTES = 1024 * 1024
 
 
-def make_handler(service: Za3imService, api_token: str = ""):
+def make_handler(
+    service: Za3imService,
+    api_token: str = "",
+    max_body_bytes: int = DEFAULT_MAX_BODY_BYTES,
+):
     class Handler(BaseHTTPRequestHandler):
         server_version = "Za3im/0.1"
 
@@ -106,7 +110,7 @@ def make_handler(service: Za3imService, api_token: str = ""):
             if length < 0:
                 self._send_json(411, {"error": {"code": "LENGTH_REQUIRED", "message": "Content-Length is required"}})
                 return
-            if length > MAX_BODY_BYTES:
+            if length > max_body_bytes:
                 self._send_json(413, {"error": {"code": "BODY_TOO_LARGE", "message": "Request body exceeds the configured limit"}})
                 return
             try:
@@ -123,17 +127,35 @@ def make_handler(service: Za3imService, api_token: str = ""):
     return Handler
 
 
-def serve() -> None:
-    host = os.getenv("ZA3IM_API_HOST", "127.0.0.1")
-    port = int(os.getenv("ZA3IM_API_PORT", "8080"))
-    api_token = os.getenv("ZA3IM_API_TOKEN", "").strip()
-    if host not in {"127.0.0.1", "localhost", "::1"} and not api_token:
-        raise SystemExit("Refusing non-loopback bind without ZA3IM_API_TOKEN; this runtime is not a production multi-tenant service.")
-    store = ExecutionStore(os.getenv("ZA3IM_DB_PATH", "za3im_state.sqlite3"), os.getenv("ZA3IM_ARTIFACT_DIR", "za3im_artifacts"))
-    provider = OpenAIResponsesClient()
-    service = Za3imService(store, provider)
-    server = ThreadingHTTPServer((host, port), make_handler(service, api_token))
-    print(f"Za3im runtime listening at http://{host}:{port}; model={provider.model}; provider_configured={bool(provider.api_key)}")
+def serve(config: RuntimeConfig | None = None) -> None:
+    try:
+        settings = config or RuntimeConfig.from_env()
+    except ConfigurationError as exc:
+        raise SystemExit(f"Invalid Za3im runtime configuration: {exc}") from None
+
+    store = ExecutionStore(settings.db_path, settings.artifact_dir)
+    provider = OpenAIResponsesClient(
+        api_key=settings.openai_api_key,
+        model=settings.openai_model,
+        timeout_seconds=settings.provider_timeout_seconds,
+        live_enabled=settings.live_gpt_enabled,
+    )
+    service = Za3imService(
+        store,
+        provider,
+        max_output_tokens=settings.max_output_tokens,
+        input_price_per_million=settings.input_price_per_million,
+        output_price_per_million=settings.output_price_per_million,
+    )
+    server = ThreadingHTTPServer(
+        (settings.api_host, settings.api_port),
+        make_handler(service, settings.api_token, settings.api_max_body_bytes),
+    )
+    print(
+        f"Za3im runtime listening at http://{settings.api_host}:{settings.api_port}; "
+        f"model={provider.model}; provider_configured={bool(provider.api_key)}; "
+        f"live_gpt_enabled={settings.live_gpt_enabled}"
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

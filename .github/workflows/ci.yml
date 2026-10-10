@@ -25,3 +25,29 @@ jobs:
         run: python -m compileall -q za3im_runtime tests
       - name: Run deterministic suite
         run: python -m unittest discover -s tests -v
+      - name: Build wheel and verify executable contracts are packaged
+        run: |
+          python -m pip wheel . --no-deps --wheel-dir dist
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheels = list(Path("dist").glob("*.whl"))
+          assert len(wheels) == 1, f"expected exactly one wheel, got {wheels}"
+          with ZipFile(wheels[0]) as wheel:
+              names = set(wheel.namelist())
+          required = {
+              "za3im_runtime/config.py",
+              "za3im_runtime/capabilities.py",
+              "za3im_runtime/ports.py",
+              "za3im_runtime/provider.py",
+              "za3im_runtime/service.py",
+              "za3im_runtime/store.py",
+              "schemas/za3im-execution-request.schema.json",
+              "schemas/business-profile.schema.json",
+              "schemas/za3im-execution-result.schema.json",
+          }
+          missing = sorted(required - names)
+          assert not missing, f"wheel is missing required runtime/contract files: {missing}"
+          print(f"Wheel package contents verified: {wheels[0]}")
+          PY

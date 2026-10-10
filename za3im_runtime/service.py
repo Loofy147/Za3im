@@ -12,11 +12,15 @@ from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
-
 from jsonschema import Draft202012Validator, FormatChecker
 
-from .store import ExecutionStore, IdempotencyConflict, utc_now
+from .capabilities import (
+    BUSINESS_PRESENCE_REQUIRED_CAPABILITIES,
+    CANDIDATE_CAPABILITY_IDS,
+    CAPABILITY_REGISTRY_VERSION,
+    IMPLEMENTED_CAPABILITIES,
+)
+from .ports import CopyProviderPort, ExecutionRepositoryPort, IdempotencyConflict
 
 ROOT = Path(__file__).resolve().parent.parent
 REQUEST_SCHEMA = json.loads((ROOT / "schemas/za3im-execution-request.schema.json").read_text(encoding="utf-8"))
@@ -26,27 +30,9 @@ REQUEST_VALIDATOR = Draft202012Validator(REQUEST_SCHEMA, format_checker=FormatCh
 PROFILE_VALIDATOR = Draft202012Validator(PROFILE_SCHEMA, format_checker=FormatChecker())
 RESULT_VALIDATOR = Draft202012Validator(RESULT_SCHEMA, format_checker=FormatChecker())
 
-IMPLEMENTED_CAPABILITIES = {
-    "website.generate-draft": {
-        "status": "implemented_contract_tested_live_gpt_disabled_until_finished_product",
-        "description": "Generate an unpublished static HTML website draft from a validated business profile.",
-        "version": "0.1.0",
-    },
-    "marketing.copy.generate": {
-        "status": "implemented_unit_tested_live_provider_not_verified",
-        "description": "Generate and store draft promotional copy alongside the website artifact.",
-        "version": "0.1.0",
-    },
-    "website.contact-channels.render": {
-        "status": "implemented_unit_tested_live_gpt_disabled_until_finished_product",
-        "description": "Render explicitly preferred business contact channels with validated links and escaped public details.",
-        "version": "0.1.0",
-    },
-}
-SUPPORTED_CAPABILITIES = set(IMPLEMENTED_CAPABILITIES)
-MAX_OUTPUT_TOKENS = int(os.getenv("ZA3IM_MAX_OUTPUT_TOKENS", "1200"))
-INPUT_PRICE_PER_MILLION = float(os.getenv("ZA3IM_OPENAI_INPUT_USD_PER_MILLION", "0.10"))
-OUTPUT_PRICE_PER_MILLION = float(os.getenv("ZA3IM_OPENAI_OUTPUT_USD_PER_MILLION", "0.50"))
+DEFAULT_MAX_OUTPUT_TOKENS = 1200
+DEFAULT_INPUT_PRICE_PER_MILLION = 0.10
+DEFAULT_OUTPUT_PRICE_PER_MILLION = 0.50
 
 
 def _timestamp() -> str:
@@ -325,16 +311,27 @@ def verify_html(document: str) -> tuple[bool, str]:
 
 
 class Za3imService:
-    def __init__(self, store: ExecutionStore, provider: Any):
+    def __init__(
+        self,
+        store: ExecutionRepositoryPort,
+        provider: CopyProviderPort,
+        *,
+        max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
+        input_price_per_million: float = DEFAULT_INPUT_PRICE_PER_MILLION,
+        output_price_per_million: float = DEFAULT_OUTPUT_PRICE_PER_MILLION,
+    ):
         self.store = store
         self.provider = provider
+        self.max_output_tokens = max_output_tokens
+        self.input_price_per_million = input_price_per_million
+        self.output_price_per_million = output_price_per_million
 
     def capabilities(self) -> dict:
-        return {"registry_version": "za3im.capabilities/0.1", "capabilities": [
+        return {"registry_version": CAPABILITY_REGISTRY_VERSION, "capabilities": [
             {"capability_id": cap_id, **meta, "live_execution": "disabled_until_finished_product" if not getattr(self.provider, "live_enabled", False) else "opted_in_not_live_verified"} for cap_id, meta in IMPLEMENTED_CAPABILITIES.items()
         ] + [
             {"capability_id": cap_id, "status": "candidate_disabled", "description": "Not integrated or enabled; no working adapter is claimed.", "version": None}
-            for cap_id in ["agent.deer-flow", "agent.agent-zero", "agent.openmanus", "agent.openhands", "browser.browser-use", "browser.skyvern", "experience.export-import", "ads.manage", "video.generate", "deployment.publish", "credits.bill"]
+            for cap_id in CANDIDATE_CAPABILITY_IDS
         ]}
 
     def execute_request(self, request: dict) -> tuple[int, dict]:
@@ -354,7 +351,7 @@ class Za3imService:
             return 400, {"error": {"code": "INVALID_BUSINESS_PROFILE", "message": detail}}
 
         requested = {item["capability_id"] for item in request["capabilities"]}
-        if requested != SUPPORTED_CAPABILITIES:
+        if requested != BUSINESS_PRESENCE_REQUIRED_CAPABILITIES:
             return 501, {"error": {"code": "CAPABILITY_NOT_IMPLEMENTED", "message": "This runtime currently supports exactly website.generate-draft and marketing.copy.generate together. Other capabilities are not enabled."}}
         allowed = set(request["constraints"].get("allowed_capability_ids", []))
         if not requested.issubset(allowed):
@@ -385,7 +382,7 @@ class Za3imService:
             return 200, body
 
         execution_id = request["execution_id"]
-        started_at = utc_now()
+        started_at = _timestamp()
         generated = None
         usage_event_id = None
         verification_event_ids = []
@@ -405,7 +402,7 @@ class Za3imService:
                 self.store.finish(execution_id, "budget_exceeded", result, result["errors"][0])
                 return 422, self._body(self.store.get_execution(execution_id))
 
-            generated = self.provider.generate_copy(provider_profile, max_output_tokens=MAX_OUTPUT_TOKENS)
+            generated = self.provider.generate_copy(provider_profile, max_output_tokens=self.max_output_tokens)
             usage = generated.get("usage") if isinstance(generated.get("usage"), dict) else None
             estimated_cost = self._estimated_cost(usage)
             if usage is not None:
@@ -490,16 +487,21 @@ class Za3imService:
     def _max_cost_bound(self, profile: dict) -> float:
         serialized = json.dumps(profile, ensure_ascii=False, separators=(",", ":"))
         input_token_ceiling = len(serialized.encode("utf-8")) + 4096
-        return (input_token_ceiling * INPUT_PRICE_PER_MILLION + MAX_OUTPUT_TOKENS * OUTPUT_PRICE_PER_MILLION) / 1_000_000
+        return (
+            input_token_ceiling * self.input_price_per_million
+            + self.max_output_tokens * self.output_price_per_million
+        ) / 1_000_000
 
-    @staticmethod
-    def _estimated_cost(usage: object) -> float | None:
+    def _estimated_cost(self, usage: object) -> float | None:
         if not isinstance(usage, dict):
             return None
         input_tokens, output_tokens = usage.get("input_tokens"), usage.get("output_tokens")
         if not isinstance(input_tokens, int) or not isinstance(output_tokens, int) or input_tokens < 0 or output_tokens < 0:
             return None
-        return (input_tokens * INPUT_PRICE_PER_MILLION + output_tokens * OUTPUT_PRICE_PER_MILLION) / 1_000_000
+        return (
+            input_tokens * self.input_price_per_million
+            + output_tokens * self.output_price_per_million
+        ) / 1_000_000
 
     def _failed_result(self, request: dict, started_at: str, status: str, code: str, message: str, generated: dict | None) -> dict:
         usage = generated.get("usage") if isinstance(generated, dict) else None
