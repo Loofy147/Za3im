@@ -17,3 +17,4 @@ packages = ["za3im_runtime", "schemas"]
 
 [tool.setuptools.package-data]
 schemas = ["*.json"]
+za3im_runtime = ["context_sources.json"]
