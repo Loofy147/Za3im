@@ -476,6 +476,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertIn("website.generate-draft", ids)
         self.assertIn("marketing.copy.generate", ids)
         self.assertIn("website.contact-channels.render", ids)
+        self.assertIn("context.catalog.read", ids)
 
     def test_api_token_is_required_when_configured(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.service, api_token="test-secret-token"))
