@@ -12,8 +12,6 @@ from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
-
 from jsonschema import Draft202012Validator, FormatChecker
 
 from .capabilities import (
@@ -22,7 +20,7 @@ from .capabilities import (
     CAPABILITY_REGISTRY_VERSION,
     IMPLEMENTED_CAPABILITIES,
 )
-from .store import ExecutionStore, IdempotencyConflict, utc_now
+from .ports import CopyProviderPort, ExecutionRepositoryPort, IdempotencyConflict
 
 ROOT = Path(__file__).resolve().parent.parent
 REQUEST_SCHEMA = json.loads((ROOT / "schemas/za3im-execution-request.schema.json").read_text(encoding="utf-8"))
@@ -315,8 +313,8 @@ def verify_html(document: str) -> tuple[bool, str]:
 class Za3imService:
     def __init__(
         self,
-        store: ExecutionStore,
-        provider: Any,
+        store: ExecutionRepositoryPort,
+        provider: CopyProviderPort,
         *,
         max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
         input_price_per_million: float = DEFAULT_INPUT_PRICE_PER_MILLION,
@@ -384,7 +382,7 @@ class Za3imService:
             return 200, body
 
         execution_id = request["execution_id"]
-        started_at = utc_now()
+        started_at = _timestamp()
         generated = None
         usage_event_id = None
         verification_event_ids = []
