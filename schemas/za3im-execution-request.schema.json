@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://za3im.example/schemas/execution-request-0.1.json",
+  "title": "Za3im Execution Request",
+  "description": "Proposed v0.1 adapter contract. The example domain is a placeholder, not a production endpoint.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "execution_id", "tenant_id", "project_id", "task_id", "idempotency_key", "objective", "acceptance_criteria", "capabilities", "constraints", "budget", "created_at"],
+  "properties": {
+    "schema_version": { "const": "za3im.execution.request/0.1" },
+    "execution_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "tenant_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "project_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "task_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "parent_execution_id": { "type": ["string", "null"], "maxLength": 200 },
+    "idempotency_key": { "type": "string", "minLength": 8, "maxLength": 256 },
+    "trace_id": { "type": ["string", "null"], "maxLength": 200 },
+    "objective": { "type": "string", "minLength": 1, "maxLength": 20000 },
+    "locale": { "type": "string", "default": "ar-DZ", "maxLength": 35 },
+    "acceptance_criteria": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["criterion_id", "description", "verification_method"],
+        "properties": {
+          "criterion_id": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 4000 },
+          "verification_method": { "type": "string", "enum": ["schema", "automated_test", "human_review", "external_state_check", "source_check", "manual_attestation"] }
+        }
+      }
+    },
+    "context_references": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["reference_id", "reference_type"],
+        "properties": {
+          "reference_id": { "type": "string", "minLength": 1, "maxLength": 300 },
+          "reference_type": { "type": "string", "enum": ["artifact", "dataset", "knowledge_record", "connector_result", "experience_instance", "external_source"] },
+          "version": { "type": ["string", "null"], "maxLength": 200 },
+          "purpose": { "type": ["string", "null"], "maxLength": 1000 }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["capability_id", "version_constraint"],
+        "properties": {
+          "capability_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "version_constraint": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "input_reference_ids": { "type": "array", "items": { "type": "string", "maxLength": 300 } }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object", "additionalProperties": false,
+      "required": ["data_classification", "approval_mode", "network_policy"],
+      "properties": {
+        "deadline_at": { "type": ["string", "null"], "format": "date-time" },
+        "max_runtime_seconds": { "type": "integer", "minimum": 1, "maximum": 604800, "default": 1800 },
+        "max_tool_calls": { "type": "integer", "minimum": 0, "maximum": 10000, "default": 50 },
+        "max_steps": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 },
+        "data_classification": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] },
+        "approval_mode": { "type": "string", "enum": ["none_for_allowed_actions", "external_actions", "every_external_action", "manual_each_step"] },
+        "network_policy": { "type": "string", "enum": ["deny_by_default", "allowlist_only", "restricted_egress"] },
+        "allowed_capability_ids": { "type": "array", "items": { "type": "string", "maxLength": 200 } },
+        "allowed_domain_names": { "type": "array", "items": { "type": "string", "maxLength": 253 } },
+        "allowed_model_providers": { "type": "array", "items": { "type": "string", "maxLength": 100 }, "default": ["openai"] },
+        "allow_subdelegation": { "type": "boolean", "default": false }
+      }
+    },
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["max_provider_cost_usd", "max_customer_credits"],
+      "properties": {
+        "max_provider_cost_usd": { "type": "number", "minimum": 0 },
+        "max_customer_credits": { "type": "integer", "minimum": 0 },
+        "max_external_spend": { "type": ["number", "null"], "minimum": 0 },
+        "external_spend_currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object", "maxProperties": 100, "additionalProperties": { "type": ["string", "number", "boolean", "null"] } }
+  }
+}
