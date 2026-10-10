@@ -1,61 +1,48 @@
 {
   "schema_version": "za3im.execution.result/0.1",
-  "execution_id": "exec_demo_00000001",
+  "execution_id": "exec-example-synthetic-001",
   "status": "succeeded",
-  "started_at": "2026-10-10T15:00:02+01:00",
-  "finished_at": "2026-10-10T15:00:18+01:00",
-  "summary": "Synthetic test only: the website draft was generated and its required checks passed. No external actions were performed.",
+  "started_at": "2026-10-10T14:00:00Z",
+  "finished_at": "2026-10-10T14:00:04Z",
+  "summary": "Synthetic schema fixture only. No real provider call occurred.",
   "artifacts": [
     {
-      "artifact_id": "artifact_synthetic_site_01",
-      "role": "website_source",
-      "media_type": "application/zip",
-      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-      "size_bytes": 10240,
-      "provenance_reference_ids": ["event_synthetic_generation_01"]
+      "artifact_id": "artifact-example-html",
+      "role": "website_html",
+      "media_type": "text/html; charset=utf-8",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size_bytes": 1024,
+      "provenance_reference_ids": []
     }
   ],
   "verification": {
     "status": "passed",
     "checks": [
       {
-        "check_id": "artifact-hash-present",
+        "check_id": "example-shape-only",
         "status": "passed",
         "method": "schema",
-        "evidence_reference_ids": ["event_synthetic_generation_01"],
-        "details": "Illustrative data only; no real artifact is attached."
-      },
-      {
-        "check_id": "external-actions-blocked",
-        "status": "passed",
-        "method": "automated_test",
-        "evidence_reference_ids": ["event_synthetic_policy_check_01"],
-        "details": "No publication, advertising spend, or customer messages occurred in the synthetic test."
+        "evidence_reference_ids": ["event-example-1"],
+        "details": "Synthetic fixture; not a claim that this artifact exists remotely."
       }
     ]
   },
   "accounting": {
-    "actual_provider_cost_usd": 0.03,
-    "customer_credits_charged": 8,
-    "accounting_status": "reconciled",
-    "usage_reference_ids": ["usage_synthetic_01"]
+    "actual_provider_cost_usd": null,
+    "estimated_provider_cost_usd": 0.0001,
+    "customer_credits_charged": null,
+    "accounting_status": "estimated",
+    "usage_reference_ids": ["event-example-usage"]
   },
   "engine": {
-    "engine_id": "synthetic-test-adapter",
-    "engine_version": "0.0.0-test",
+    "engine_id": "fake-provider-test-double",
+    "engine_version": "synthetic",
     "adapter_version": "0.1.0",
-    "model_provider": "openai",
-    "model_id": "synthetic-test-model-label"
+    "model_provider": "synthetic",
+    "model_id": "synthetic-only"
   },
   "errors": [],
-  "side_effects": [
-    {
-      "action_id": "publish-site",
-      "status": "skipped",
-      "idempotency_key": "idem-demo-publish-0001",
-      "external_reference": null
-    }
-  ],
-  "event_reference_ids": ["event_synthetic_generation_01", "event_synthetic_policy_check_01"],
-  "known_limitations": ["This is an example record, not evidence that Za3im has executed this workflow."]
+  "side_effects": [],
+  "event_reference_ids": ["event-example-1", "event-example-usage"],
+  "known_limitations": ["Synthetic example only; it is not a live-provider specimen and does not prove deployment, billing or production readiness."]
 }
