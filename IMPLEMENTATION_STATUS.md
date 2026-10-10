@@ -12,6 +12,11 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 |---|---|---|
 | Request schema validation | UNIT_TESTED | Rejects malformed requests before claim/provider access |
 | Business profile schema validation | UNIT_TESTED | Invalid profile rejected before provider call |
+| Runtime configuration | UNIT_TESTED | Environment is parsed only by RuntimeConfig; eight config tests plus runtime-wiring integration cover defaults, strict parsing, bind safety, limits and injection into server/provider/service |
+| Executable capability registry | UNIT_TESTED | Registry metadata and ID invariants pass; workflow requirements are separate from the set of registered candidates/features |
+| Provider/repository ports | UNIT_TESTED | Runtime protocol-conformance tests pass for OpenAI adapter, deterministic provider and SQLite; idempotency conflict is one shared domain exception |
+| Schema/example conformance | UNIT_TESTED | All three Draft 2020-12 schemas are checked; synthetic request, nested business profile and result fixtures validate in CI |
+| Built wheel contents | CI_VERIFIED | CI built `za3im_runtime-0.1.0-py3-none-any.whl` and verified config, registry, ports, provider, service, store and all three schema resources are included |
 | Runtime configuration | UNIT_TESTED | Eight configuration tests cover defaults, parsing, malformed values, safe bind policy and cost/token/time limits; runtime-wiring integration test proves validated settings reach HTTP, provider and service boundaries |
 | Executable capability registry | UNIT_TESTED | Four tests validate metadata, IDs, separation of disabled candidates and stable business-presence workflow requirements |
 | Provider/repository ports | UNIT_TESTED | Four runtime-conformance tests confirm OpenAI client, synthetic provider and SQLite adapter satisfy shared Protocol contracts; idempotency conflict is one shared type |
@@ -31,17 +36,18 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Local HTTP flow | UNIT_TESTED | Test starts a real local HTTP server and calls health, execute and artifact routes |
 | Event/evidence references | UNIT_TESTED | Returned event references point to persisted events |
 | Wheel contents | LOCALLY_VERIFIED | Local wheel built with pip wheel --no-deps --no-build-isolation; runtime modules and schemas included |
-| CI workflow | PASS | GitHub Actions run [#47](https://github.com/Loofy147/Za3im/actions/runs/38074690875) passed compile, 44 deterministic tests and built-wheel content checks on executable/test revision `549eb2d7a6a1afc52cf72c53d6bafd60c2935928` and CI configuration revision `96e15c9f73bafa8e0b8a5d22999463766a6c93f2` |
+| CI workflow | PASS | GitHub Actions run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325) passed compile, all 45 deterministic tests and wheel-content checks with executable/test revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37` and CI configuration revision `96e15c9f73bafa8e0b8a5d22999463766a6c93f2` |
 
 Local test command: python -m unittest discover -s tests -v  
-GitHub Actions run [#47](https://github.com/Loofy147/Za3im/actions/runs/38074690875) passed on the source-foundation change: compile succeeded, all 44 deterministic tests passed in 1.525 seconds, and a built wheel was verified to contain the runtime modules and all three JSON Schemas. The code/test revision used in that run was `549eb2d7a6a1afc52cf72c53d6bafd60c2935928`; the added wheel inspection step was at `96e15c9f73bafa8e0b8a5d22999463766a6c93f2`. Subsequent changes through `71daa455b3a483402aba5503e947480c8a301554` were documentation-only. Live GPT remained disabled and no provider request was sent.
+GitHub Actions run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325) passed on revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37`: compile succeeded, all 45 deterministic tests passed in 1.579 seconds, and the built wheel was verified to contain the runtime modules and all three JSON Schemas. The wheel-content CI step was introduced at `96e15c9f73bafa8e0b8a5d22999463766a6c93f2`. The provider environment-boundary regression also passed: direct adapter construction remains keyless and live-disabled even when environment values are set. Live GPT remained disabled and no provider request was sent.
 
 ## Foundation iteration: failures and corrections
 
 - CI run [#29](https://github.com/Loofy147/Za3im/actions/runs/38074240586) was the intentional RED run for configuration tests before config.py existed.
 - CI run [#32](https://github.com/Loofy147/Za3im/actions/runs/38074324050) exposed 11 runtime failures after the refactor removed os although atomic artifact writes still use it. Restoring the import at 854dca715314e3aa905b3137371c6c682d36ff7f returned the suite to green in run [#33](https://github.com/Loofy147/Za3im/actions/runs/38074386398).
-- Registry test runs [#34–#37](https://github.com/Loofy147/Za3im/actions/runs/38074420259) exposed an over-restrictive test regex for the valid registry version za3im.capabilities/0.2; the test was corrected and run [#38](https://github.com/Loofy147/Za3im/actions/runs/38074481337) passed.
-- Port conformance runs [#40–#41](https://github.com/Loofy147/Za3im/actions/runs/38074537267) failed while the shared idempotency exception was not yet migrated into the port module; the store and service were then wired to the shared contract and run [#42](https://github.com/Loofy147/Za3im/actions/runs/38074565167) passed.
+- Run [#34](https://github.com/Loofy147/Za3im/actions/runs/38074420259) was the intentional RED run before the executable capability registry existed; runs [#35–#37](https://github.com/Loofy147/Za3im/actions/runs/38074431537) exposed an over-restrictive test regex for valid registry version `za3im.capabilities/0.2`. The assertion was corrected and run [#38](https://github.com/Loofy147/Za3im/actions/runs/38074481337) passed.
+- Run [#40](https://github.com/Loofy147/Za3im/actions/runs/38074537267) was the intentional RED run before the ports module existed; run [#41](https://github.com/Loofy147/Za3im/actions/runs/38074544919) then exposed that the store had not yet imported the shared idempotency exception. The store and service were wired to the shared contract and run [#42](https://github.com/Loofy147/Za3im/actions/runs/38074565167) passed.
+- Run [#50](https://github.com/Loofy147/Za3im/actions/runs/38074799375) exposed that the provider adapter still read environment variables when constructed directly, bypassing RuntimeConfig. The adapter was changed to safe explicit defaults; its regression passed in run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325).
 
 These failures are retained as history, not counted as successful verification. Current feature status uses passing evidence only.
 
