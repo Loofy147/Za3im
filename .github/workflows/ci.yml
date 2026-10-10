@@ -39,6 +39,8 @@ jobs:
           required = {
               "za3im_runtime/config.py",
               "za3im_runtime/capabilities.py",
+              "za3im_runtime/context_catalog.py",
+              "za3im_runtime/context_sources.json",
               "za3im_runtime/ports.py",
               "za3im_runtime/provider.py",
               "za3im_runtime/service.py",
@@ -46,6 +48,7 @@ jobs:
               "schemas/za3im-execution-request.schema.json",
               "schemas/business-profile.schema.json",
               "schemas/za3im-execution-result.schema.json",
+              "schemas/context-source.schema.json",
           }
           missing = sorted(required - names)
           assert not missing, f"wheel is missing required runtime/contract files: {missing}"
