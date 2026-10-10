@@ -25,7 +25,7 @@ RESULT_VALIDATOR = Draft202012Validator(RESULT_SCHEMA, format_checker=FormatChec
 
 IMPLEMENTED_CAPABILITIES = {
     "website.generate-draft": {
-        "status": "implemented_unit_tested_live_provider_not_verified",
+        "status": "implemented_contract_tested_live_gpt_disabled_until_finished_product",
         "description": "Generate an unpublished static HTML website draft from a validated business profile.",
         "version": "0.1.0",
     },
@@ -195,7 +195,7 @@ class Za3imService:
 
     def capabilities(self) -> dict:
         return {"registry_version": "za3im.capabilities/0.1", "capabilities": [
-            {"capability_id": cap_id, **meta} for cap_id, meta in IMPLEMENTED_CAPABILITIES.items()
+            {"capability_id": cap_id, **meta, "live_execution": "disabled_until_finished_product" if not getattr(self.provider, "live_enabled", False) else "opted_in_not_live_verified"} for cap_id, meta in IMPLEMENTED_CAPABILITIES.items()
         ] + [
             {"capability_id": cap_id, "status": "candidate_disabled", "description": "Not integrated or enabled; no working adapter is claimed.", "version": None}
             for cap_id in ["agent.deer-flow", "agent.agent-zero", "agent.openmanus", "agent.openhands", "browser.browser-use", "browser.skyvern", "experience.export-import", "ads.manage", "video.generate", "deployment.publish", "credits.bill"]
@@ -235,6 +235,8 @@ class Za3imService:
             return 403, {"error": {"code": "RUNTIME_CAPABILITY_NOT_ALLOWED", "message": "The request does not allow the provider and artifact-write capabilities required by this experience"}}
         if request["budget"]["max_provider_cost_usd"] <= 0:
             return 422, {"error": {"code": "BUDGET_EXCEEDED", "message": "Provider cost budget must be greater than zero for this experience"}}
+        if not getattr(self.provider, "live_enabled", False):
+            return 503, {"error": {"code": "LIVE_GPT_DISABLED", "message": "Live GPT requests are disabled until finished-product validation. No execution was claimed and no provider request was sent."}}
 
         try:
             record, created = self.store.claim(request)
