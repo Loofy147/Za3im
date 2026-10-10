@@ -2,10 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://za3im.example/schemas/execution-request-0.1.json",
   "title": "Za3im Execution Request",
-  "description": "Proposed v0.1 adapter contract. The example domain is a placeholder, not a production endpoint.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "execution_id", "tenant_id", "project_id", "task_id", "idempotency_key", "objective", "acceptance_criteria", "capabilities", "constraints", "budget", "created_at"],
+  "required": ["schema_version", "execution_id", "tenant_id", "project_id", "task_id", "idempotency_key", "objective", "acceptance_criteria", "capabilities", "constraints", "budget", "created_at", "input_payload"],
   "properties": {
     "schema_version": { "const": "za3im.execution.request/0.1" },
     "execution_id": { "type": "string", "minLength": 1, "maxLength": 200 },
@@ -82,6 +81,7 @@
       }
     },
     "created_at": { "type": "string", "format": "date-time" },
+    "input_payload": { "type": "object", "description": "Typed workload input. Capability-specific schema validation is required by the selected experience.", "maxProperties": 100, "additionalProperties": true },
     "metadata": { "type": "object", "maxProperties": 100, "additionalProperties": { "type": ["string", "number", "boolean", "null"] } }
   }
 }
