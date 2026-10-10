@@ -20,6 +20,7 @@ from za3im_runtime.store import ExecutionStore
 class FakeProvider:
     provider = "openai-test-double"
     model = "test-model"
+    live_enabled = True  # deterministic fake only; never sends network requests
 
     def __init__(self, delay: float = 0.0, fail: bool = False):
         self.calls = 0
@@ -236,6 +237,14 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(status, 403)
         self.assertEqual(body["error"]["code"], "PROVIDER_EGRESS_NOT_ALLOWED")
         self.assertEqual(self.provider.calls, 0)
+
+    def test_live_gpt_disabled_blocks_before_claim_and_provider(self):
+        provider = OpenAIResponsesClient(api_key="test-key", model="test-model", live_enabled=False)
+        service = Za3imService(self.store, provider)
+        status, body = service.execute_request(request())
+        self.assertEqual(status, 503)
+        self.assertEqual(body["error"]["code"], "LIVE_GPT_DISABLED")
+        self.assertIsNone(self.store.get_execution("exec-test-001"))
 
     def test_budget_preflight_rejects_before_provider_call(self):
         status, body = self.service.execute_request(request(budget=0.000001))
