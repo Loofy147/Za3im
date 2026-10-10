@@ -1,7 +1,7 @@
 # Za3im Platform Architecture v0.3 — implementation-grounded
 
 Date: 2026-10-10  
-Status: A local vertical slice is implemented and tested with a fake provider. The real OpenAI API call has not been run. This is not production-ready.
+Status: A local vertical slice is implemented and tested with a fake provider. Live GPT requests are disabled by a fail-closed runtime gate until the finished product is accepted. No real OpenAI request has been run. This is not production-ready.
 
 ## Product objective
 
@@ -70,7 +70,7 @@ Prepared Algerian context/data connectors; real browser/agent integrations; vide
 ## Release gates
 
 - Run CI against the exact revision.
-- Run a low-budget live OpenAI smoke test using explicitly authorized credentials; capture redacted evidence and provider usage.
+- Keep live GPT requests disabled during product development. Only after the complete product passes its functional, security, data-governance, cost-control and rollback acceptance gates may a dedicated finished-product validation environment enable ZA3IM_ENABLE_LIVE_GPT and run an explicitly authorized low-budget smoke test. Capture redacted evidence and provider usage.
 - Integrate one real, source-backed Algerian context path and test freshness/provenance.
 - Decide whether to integrate M0 or replace the duplicate store; document migration and restart/replay tests.
 - Add one real external connector only after scoped credentials, approval, idempotency/reconciliation and rollback checks.
