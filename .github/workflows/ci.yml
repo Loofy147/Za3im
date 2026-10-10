@@ -1,0 +1,27 @@
+name: Za3im runtime CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install package and runtime dependency
+        run: python -m pip install -e .
+      - name: Compile runtime and tests
+        run: python -m compileall -q za3im_runtime tests
+      - name: Run deterministic suite
+        run: python -m unittest discover -s tests -v
