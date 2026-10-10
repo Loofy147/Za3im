@@ -15,11 +15,9 @@ Requirements: Python 3.11+.
     python -m venv .venv
     . .venv/bin/activate
     pip install -e .
-    export OPENAI_API_KEY='YOUR_API_KEY'
-    export ZA3IM_OPENAI_MODEL='gpt-6-luna'
     python -m za3im_runtime.api
 
-A live request can incur OpenAI charges. Never commit API keys. Tests use a deterministic fake provider and do not make external API calls.
+Live GPT requests are disabled by default and are deliberately deferred until the finished product passes its acceptance gates. Starting the local server does not require an API key; draft execution returns LIVE_GPT_DISABLED (503) without making a provider request. Tests use a deterministic fake provider and mocked HTTP responses only. Never commit API keys.
 
 The server defaults to 127.0.0.1:8080, stores SQLite state in za3im_state.sqlite3, and artifacts in za3im_artifacts/. A non-loopback bind is refused unless ZA3IM_API_TOKEN is set. This shared bearer token is not production multi-tenant authentication; do not expose this MVP directly to the public internet.
 
@@ -32,7 +30,8 @@ The server defaults to 127.0.0.1:8080, stores SQLite state in za3im_state.sqlite
 | ZA3IM_API_TOKEN | empty | Optional shared bearer token |
 | ZA3IM_DB_PATH | za3im_state.sqlite3 | SQLite ledger |
 | ZA3IM_ARTIFACT_DIR | za3im_artifacts | Local artifact directory |
-| OPENAI_API_KEY | empty | Required for a real provider request |
+| OPENAI_API_KEY | empty | Required only at finished-product live-validation time |
+| ZA3IM_ENABLE_LIVE_GPT | false | Safety gate; leave false during development and testing |
 | ZA3IM_OPENAI_MODEL | gpt-6-luna | OpenAI Responses API model |
 | ZA3IM_MAX_OUTPUT_TOKENS | 1200 | Generation bound |
 | ZA3IM_OPENAI_INPUT_USD_PER_MILLION | 0.10 | Configured estimate rate |
@@ -63,7 +62,7 @@ When a token is configured, send Authorization: Bearer $ZA3IM_API_TOKEN on prote
     python -m unittest discover -s tests -v
     python -m compileall -q za3im_runtime tests
 
-The tests use mocked provider HTTP and a fake provider while exercising the local HTTP server and SQLite implementation. They do not prove a live OpenAI request, deployment, customer billing, production security, or distributed execution. GitHub Actions runs these deterministic checks on pushes and pull requests.
+The tests use mocked provider HTTP and a fake provider while exercising the local HTTP server and SQLite implementation. Live GPT is deliberately disabled by default in the runtime and is not required for intermediate development. Only after the finished-product acceptance checklist is met should the dedicated live-validation environment set ZA3IM_ENABLE_LIVE_GPT=true and provide OPENAI_API_KEY. The tests do not prove a live OpenAI request, deployment, customer billing, production security, or distributed execution. GitHub Actions runs deterministic checks on pushes and pull requests.
 
 ## Evidence and implementation status
 
