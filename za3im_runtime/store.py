@@ -8,9 +8,7 @@ from datetime import datetime, timezone
 from contextlib import contextmanager
 from pathlib import Path
 
-
-class IdempotencyConflict(Exception):
-    pass
+from .ports import IdempotencyConflict
 
 
 def utc_now() -> str:
