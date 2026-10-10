@@ -1,0 +1,110 @@
+# Candidate registry only. All entries remain disabled until pinned-version review,
+# license/security review, adapter implementation, and conformance tests pass.
+registry_schema_version: za3im.engine-registry/0.1
+last_reviewed: 2026-10-10
+policy:
+  default_enablement: disabled
+  require_immutable_version: true
+  require_license_review: true
+  require_sbom: true
+  require_security_review: true
+  require_adapter_conformance: true
+  require_budget_limit: true
+  require_tenant_scope: true
+
+engines:
+  - id: deer-flow
+    repository: https://github.com/bytedance/deer-flow
+    kind: agent_harness
+    candidate_capabilities: [long_horizon_research, compound_workflows, report_creation, artifact_generation]
+    declared_license: MIT
+    integration_status: candidate
+    enablement: disabled
+    risk_notes: "High-privilege operations; pin a commit; follow upstream security guidance; not a trusted public endpoint by default."
+
+  - id: agent-zero
+    repository: https://github.com/agent0ai/agent-zero
+    kind: computer_agent
+    candidate_capabilities: [terminal_workspace, filesystem_operations, browser_operations, document_work]
+    declared_license: MIT
+    integration_status: candidate
+    enablement: disabled
+    risk_notes: "Sandbox per tenant/job; disable host bridge unless a task explicitly requires it."
+
+  - id: openmanus
+    repository: https://github.com/FoundationAgents/OpenManus
+    kind: agent_framework
+    candidate_capabilities: [general_agent_execution, browser_research, task_planning]
+    declared_license: verify_at_pinned_commit
+    integration_status: candidate
+    enablement: disabled
+    risk_notes: "Comparison candidate; verify exact license, dependency health, API compatibility, and reliability."
+
+  - id: openhands-sdk
+    repository: https://github.com/OpenHands/software-agent-sdk
+    kind: software_agent_sdk
+    candidate_capabilities: [code_generation, repository_modification, test_execution, software_maintenance]
+    declared_license: MIT
+    integration_status: candidate
+    enablement: disabled
+    risk_notes: "Use ephemeral workspaces; patch review and tests required; no production credentials by default."
+
+  - id: browser-use
+    repository: https://github.com/browser-use/browser-use
+    kind: browser_executor
+    candidate_capabilities: [browser_navigation, web_extraction, form_interaction]
+    declared_license: MIT
+    integration_status: candidate
+    enablement: disabled
+    risk_notes: "Allowlisted domains, isolated browser sessions, and side-effect confirmation."
+
+  - id: skyvern
+    repository: https://github.com/Skyvern-AI/skyvern
+    kind: browser_workflow_engine
+    candidate_capabilities: [structured_browser_workflows, form_filling, web_extraction]
+    declared_license: AGPL-3.0
+    integration_status: candidate
+    enablement: disabled
+    commercial_license_gate: required
+    risk_notes: "Do not ship in the commercial hosted product until legal reviews AGPL implications and deployment model."
+
+infrastructure_candidates:
+  - id: litellm
+    repository: https://github.com/BerriAI/litellm
+    candidate_role: model_gateway
+    declared_license: MIT_core_with_enterprise_directory_exception
+    integration_status: evaluate_after_provider_interface
+    enablement: disabled
+    decision_gate: "Compare with a thin first-party provider adapter; pin version and review all used paths."
+
+  - id: temporal
+    repository: https://github.com/temporalio/temporal
+    candidate_role: durable_workflow_runtime
+    declared_license: MIT
+    integration_status: evaluate_after_existing_runtime_audit
+    enablement: disabled
+    decision_gate: "Inspect m0-durable-run and current Za3im job durability before adopting."
+
+  - id: e2b
+    repository: https://github.com/e2b-dev/e2b
+    candidate_role: isolated_execution_sandbox
+    declared_license: Apache-2.0
+    integration_status: candidate
+    enablement: disabled
+    decision_gate: "Compare self-hosted and hosted cost, isolation, network, persistence, and data-handling properties."
+
+protocols_and_observability:
+  - id: mcp
+    specification: https://modelcontextprotocol.io/
+    role: tool_and_context_interoperability
+    use_policy: "Register known servers; apply per-capability auth and tool allowlists."
+
+  - id: a2a
+    specification: https://a2a-protocol.org/
+    role: external_agent_interoperability
+    use_policy: "Use only where independently deployed agent interoperability is needed."
+
+  - id: opentelemetry
+    specification: https://opentelemetry.io/docs/specs/semconv/
+    role: tracing_metrics_logs
+    use_policy: "Propagate correlation IDs; scrub secrets and sensitive prompt content."
