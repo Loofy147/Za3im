@@ -1,0 +1,83 @@
+# Illustrative manifest only. Not executable or production validated.
+manifest_schema_version: za3im.experience-manifest/0.1
+experience:
+  id: dz-business-presence-starter
+  version: 0.1.0
+  name: Business digital-presence starter
+  description: >-
+    Creates a draft digital-presence package from user-approved business facts.
+    Website publication, advertising spend, customer messaging, and account linking
+    remain separate approval-gated actions.
+  publisher:
+    id: za3im-first-party
+    display_name: Za3im
+  license:
+    package_license: to_be_decided
+    third_party_components: []
+  runtime:
+    contract_range: ">=0.1.0 <0.2.0"
+    required_features: [artifact_store, approval_gates, verification, credit_metering]
+  inputs:
+    schema_ref: schemas/business-profile.schema.json
+    required_fields: [business_name, wilaya, service_category, contact_preferences]
+  outputs:
+    - role: website_source
+      media_types: [text/html, application/zip]
+    - role: promotional_copy
+      media_types: [text/markdown, application/json]
+    - role: delivery_report
+      media_types: [application/json, text/markdown]
+  capabilities:
+    - id: algerian-context.lookup
+      version_constraint: "^0.1"
+    - id: website.generate-draft
+      version_constraint: "^0.1"
+    - id: website.test-responsive
+      version_constraint: "^0.1"
+    - id: marketing.copy.generate
+      version_constraint: "^0.1"
+  permissions:
+    default: deny
+    requested:
+      - capability: artifact.write
+        scope: current_project
+        approval: pre_granted_for_draft_creation
+      - capability: website.publish
+        scope: explicitly_selected_deployment_target
+        approval: required_at_action_time
+      - capability: advertising.spend
+        scope: explicitly_selected_ad_account
+        approval: required_at_action_time
+  connectors:
+    required: []
+    optional: [deployment_provider, analytics_provider, advertising_provider]
+    credentials_in_package: false
+  state:
+    schema_version: 1
+    export_default: false
+    migration_policy: explicit_versioned_migration
+  dependencies:
+    capability_providers:
+      - capability_id: website.generate-draft
+        version_constraint: "^0.1"
+      - capability_id: website.test-responsive
+        version_constraint: "^0.1"
+      - capability_id: marketing.copy.generate
+        version_constraint: "^0.1"
+    dependency_resolution: "resolve a compatible provider at installation; pin exact provider build per run"
+  verification:
+    required_checks:
+      - input_schema_valid
+      - generated_artifact_hash_recorded
+      - website_smoke_test_passed
+      - external_actions_not_performed_without_approval
+    cross_runtime_required: true
+  security:
+    network_policy: allowlist_only
+    default_data_classification: confidential
+    disallow_secret_export: true
+    untrusted_content_policy: treat_as_data
+  provenance:
+    source_revision: to_be_set_when_published
+    package_sha256: to_be_calculated_when_built
+    signature: optional_until_signing_infrastructure_exists
