@@ -11,12 +11,14 @@
   "locale": "ar-DZ",
   "acceptance_criteria": [
     {"criterion_id": "website-valid", "description": "Generate a valid HTML draft with a SHA-256 hash.", "verification_method": "automated_test"},
+    {"criterion_id": "contact-channels-safe", "description": "Render only explicitly preferred channels and reject unsafe link schemes.", "verification_method": "automated_test"},
     {"criterion_id": "no-external-effects", "description": "Do not publish or spend advertising money.", "verification_method": "automated_test"}
   ],
   "context_references": [],
   "capabilities": [
     {"capability_id": "website.generate-draft", "version_constraint": "^0.1", "input_reference_ids": []},
-    {"capability_id": "marketing.copy.generate", "version_constraint": "^0.1", "input_reference_ids": []}
+    {"capability_id": "marketing.copy.generate", "version_constraint": "^0.1", "input_reference_ids": []},
+    {"capability_id": "website.contact-channels.render", "version_constraint": "^0.1", "input_reference_ids": []}
   ],
   "constraints": {
     "deadline_at": null,
@@ -26,7 +28,7 @@
     "data_classification": "confidential",
     "approval_mode": "external_actions",
     "network_policy": "allowlist_only",
-    "allowed_capability_ids": ["website.generate-draft", "marketing.copy.generate", "artifact.write", "provider.openai.responses"],
+    "allowed_capability_ids": ["website.generate-draft", "marketing.copy.generate", "website.contact-channels.render", "artifact.write", "provider.openai.responses"],
     "allowed_domain_names": ["api.openai.com"],
     "allowed_model_providers": ["openai"],
     "allow_subdelegation": false
