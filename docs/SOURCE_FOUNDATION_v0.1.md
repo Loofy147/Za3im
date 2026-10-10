@@ -1,7 +1,7 @@
 # Za3im source foundation v0.1
 
 Date: 2026-10-10  
-Status: executable source and tests pass on revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37` (CI run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325)); merge is pending final PR-head and post-merge CI. Do not start context or dataset ingestion until the merged main revision passes CI.
+Status: FOUNDATION GATE PASSED. Source foundation merged to `main` at `e78969af792b6f78f543c1b79a637a9d888572e0`; post-merge CI run [#54](https://github.com/Loofy147/Za3im/actions/runs/38074954353) passed all 45 tests and the wheel-content check. No context/dataset ingestion has been performed yet; the next phase may begin with an inventory-first context/data architecture.
 
 ## Objective
 
@@ -54,7 +54,7 @@ HTTP/API composition root
 
 ## Foundation acceptance gate before context/data work
 
-- [x] Executable/test revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37` passes full CI run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325); the final PR-head and post-merge main revisions still require their own CI runs.
+- [x] Feature-head and merged-main revisions passed CI; the merged main commit is `e78969af792b6f78f543c1b79a637a9d888572e0` with post-merge run [#54](https://github.com/Loofy147/Za3im/actions/runs/38074954353).
 - [x] Runtime configuration reaches server, provider, service and request-body limit through an integration test.
 - [x] Capability registry invariants and workflow composition pass tests.
 - [x] OpenAI provider and SQLite store satisfy the shared port contracts.
