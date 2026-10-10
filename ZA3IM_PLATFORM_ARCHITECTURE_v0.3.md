@@ -5,16 +5,16 @@ Status: A local vertical slice is implemented and tested with a fake provider. L
 
 ## Product objective
 
-Za3im is intended to be a conversational production platform for Algeria: turn user intent into completed, inspectable deliverables; combine prepared local context, model providers, tools and agents; and eventually package experiences for reuse. The current implementation proves only the initial website-draft and promotional-copy workflow.
+Za3im is intended to be a conversational production platform for Algeria: turn user intent into completed, inspectable deliverables; combine prepared local context, model providers, tools and agents; and eventually package experiences for reuse. The current implementation contains the initial website-draft and promotional-copy workflow, including a registered opt-in contact-channel renderer; generated site artifacts remain local and unpublished.
 
 ## Implemented path
 
-HTTP request -> request schema and business-profile validation -> capability, egress, data-classification and budget gates -> SQLite execution claim and idempotency fingerprint -> concrete OpenAI Responses API client (live call NOT RUN) -> generated JSON validation -> escaped static website draft and promotional Markdown -> structure checks and SHA-256 hashes -> persisted usage/verification events -> artifact download with hash recheck and CSP.
+HTTP request -> request schema and business-profile validation -> capability, egress, data-classification and budget gates -> SQLite execution claim and idempotency fingerprint -> concrete OpenAI Responses API client (live call NOT RUN) -> generated JSON validation -> static website draft with opt-in, normalized contact links and escaped public text + promotional Markdown -> HTML/safe-link checks and SHA-256 hashes -> persisted usage/verification events -> artifact download with hash recheck and CSP.
 
 ## Boundaries
 
 - api.py: local HTTP transport, body bounds, optional shared token, routes and artifact response headers.
-- service.py: request/profile validation, capability admission, data/egress/budget checks, execution, artifact generation and response validation.
+- service.py: request/profile validation, capability admission, data/egress/budget checks, execution, artifact generation and response validation; contact links are rendered only when selected and link schemes are checked before success.
 - provider.py: one concrete OpenAI Responses API client. Do not abstract it until a second real provider/target demonstrates a shared contract.
 - store.py: SQLite execution, idempotency, event and artifact ledger; transactional claim; unique tenant/idempotency key; startup recovery does not auto-replay interrupted provider work.
 - schemas/: versioned request, result and business-profile schemas.
@@ -24,14 +24,14 @@ HTTP request -> request schema and business-profile validation -> capability, eg
 ## Runtime invariants
 
 1. Request and nested business profile must validate before provider access.
-2. The supported workflow requires website.generate-draft and marketing.copy.generate.
+2. The supported workflow requires website.generate-draft, marketing.copy.generate and website.contact-channels.render.
 3. Request policy must explicitly allow provider.openai.responses, artifact.write, and the api.openai.com domain.
 4. Restricted data is rejected for hosted-model egress.
 5. Same tenant + idempotency key + same body replays a stored run; same key with a different canonical body returns 409.
 6. Concurrent same-key requests are tested within one process; this does not establish distributed locking.
 7. Cost checks use configured rates and conservative bounds. Rates are estimates, not invoice-level guarantees.
 8. Expected model output has exactly six fields; malformed output fails rather than creating artifacts.
-9. Generated text is HTML escaped. Output remains an unpublished local draft.
+9. Generated copy and public contact text are HTML escaped. Phone/WhatsApp links require unambiguous normalized numbers; email links are validated; social links require absolute HTTPS URLs without credentials; channel preferences suppress unselected communication buttons. Output remains an unpublished local draft.
 10. Artifact metadata records SHA-256; hashes are recalculated before download.
 11. No deployment, video, advertising account, messaging, payment, or other external side effect is performed.
 12. Unknown capability candidates do not become integrated just because they are listed in a registry file.
