@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import html
 import json
-import os
 import re
 import tempfile
 import unicodedata
@@ -44,9 +43,9 @@ IMPLEMENTED_CAPABILITIES = {
     },
 }
 SUPPORTED_CAPABILITIES = set(IMPLEMENTED_CAPABILITIES)
-MAX_OUTPUT_TOKENS = int(os.getenv("ZA3IM_MAX_OUTPUT_TOKENS", "1200"))
-INPUT_PRICE_PER_MILLION = float(os.getenv("ZA3IM_OPENAI_INPUT_USD_PER_MILLION", "0.10"))
-OUTPUT_PRICE_PER_MILLION = float(os.getenv("ZA3IM_OPENAI_OUTPUT_USD_PER_MILLION", "0.50"))
+DEFAULT_MAX_OUTPUT_TOKENS = 1200
+DEFAULT_INPUT_PRICE_PER_MILLION = 0.10
+DEFAULT_OUTPUT_PRICE_PER_MILLION = 0.50
 
 
 def _timestamp() -> str:
@@ -325,9 +324,20 @@ def verify_html(document: str) -> tuple[bool, str]:
 
 
 class Za3imService:
-    def __init__(self, store: ExecutionStore, provider: Any):
+    def __init__(
+        self,
+        store: ExecutionStore,
+        provider: Any,
+        *,
+        max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
+        input_price_per_million: float = DEFAULT_INPUT_PRICE_PER_MILLION,
+        output_price_per_million: float = DEFAULT_OUTPUT_PRICE_PER_MILLION,
+    ):
         self.store = store
         self.provider = provider
+        self.max_output_tokens = max_output_tokens
+        self.input_price_per_million = input_price_per_million
+        self.output_price_per_million = output_price_per_million
 
     def capabilities(self) -> dict:
         return {"registry_version": "za3im.capabilities/0.1", "capabilities": [
@@ -405,7 +415,7 @@ class Za3imService:
                 self.store.finish(execution_id, "budget_exceeded", result, result["errors"][0])
                 return 422, self._body(self.store.get_execution(execution_id))
 
-            generated = self.provider.generate_copy(provider_profile, max_output_tokens=MAX_OUTPUT_TOKENS)
+            generated = self.provider.generate_copy(provider_profile, max_output_tokens=self.max_output_tokens)
             usage = generated.get("usage") if isinstance(generated.get("usage"), dict) else None
             estimated_cost = self._estimated_cost(usage)
             if usage is not None:
@@ -490,16 +500,21 @@ class Za3imService:
     def _max_cost_bound(self, profile: dict) -> float:
         serialized = json.dumps(profile, ensure_ascii=False, separators=(",", ":"))
         input_token_ceiling = len(serialized.encode("utf-8")) + 4096
-        return (input_token_ceiling * INPUT_PRICE_PER_MILLION + MAX_OUTPUT_TOKENS * OUTPUT_PRICE_PER_MILLION) / 1_000_000
+        return (
+            input_token_ceiling * self.input_price_per_million
+            + self.max_output_tokens * self.output_price_per_million
+        ) / 1_000_000
 
-    @staticmethod
-    def _estimated_cost(usage: object) -> float | None:
+    def _estimated_cost(self, usage: object) -> float | None:
         if not isinstance(usage, dict):
             return None
         input_tokens, output_tokens = usage.get("input_tokens"), usage.get("output_tokens")
         if not isinstance(input_tokens, int) or not isinstance(output_tokens, int) or input_tokens < 0 or output_tokens < 0:
             return None
-        return (input_tokens * INPUT_PRICE_PER_MILLION + output_tokens * OUTPUT_PRICE_PER_MILLION) / 1_000_000
+        return (
+            input_tokens * self.input_price_per_million
+            + output_tokens * self.output_price_per_million
+        ) / 1_000_000
 
     def _failed_result(self, request: dict, started_at: str, status: str, code: str, message: str, generated: dict | None) -> dict:
         usage = generated.get("usage") if isinstance(generated, dict) else None
