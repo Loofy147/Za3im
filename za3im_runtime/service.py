@@ -16,6 +16,12 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from .capabilities import (
+    BUSINESS_PRESENCE_REQUIRED_CAPABILITIES,
+    CANDIDATE_CAPABILITY_IDS,
+    CAPABILITY_REGISTRY_VERSION,
+    IMPLEMENTED_CAPABILITIES,
+)
 from .store import ExecutionStore, IdempotencyConflict, utc_now
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,24 +32,6 @@ REQUEST_VALIDATOR = Draft202012Validator(REQUEST_SCHEMA, format_checker=FormatCh
 PROFILE_VALIDATOR = Draft202012Validator(PROFILE_SCHEMA, format_checker=FormatChecker())
 RESULT_VALIDATOR = Draft202012Validator(RESULT_SCHEMA, format_checker=FormatChecker())
 
-IMPLEMENTED_CAPABILITIES = {
-    "website.generate-draft": {
-        "status": "implemented_contract_tested_live_gpt_disabled_until_finished_product",
-        "description": "Generate an unpublished static HTML website draft from a validated business profile.",
-        "version": "0.1.0",
-    },
-    "marketing.copy.generate": {
-        "status": "implemented_unit_tested_live_provider_not_verified",
-        "description": "Generate and store draft promotional copy alongside the website artifact.",
-        "version": "0.1.0",
-    },
-    "website.contact-channels.render": {
-        "status": "implemented_unit_tested_live_gpt_disabled_until_finished_product",
-        "description": "Render explicitly preferred business contact channels with validated links and escaped public details.",
-        "version": "0.1.0",
-    },
-}
-SUPPORTED_CAPABILITIES = set(IMPLEMENTED_CAPABILITIES)
 DEFAULT_MAX_OUTPUT_TOKENS = 1200
 DEFAULT_INPUT_PRICE_PER_MILLION = 0.10
 DEFAULT_OUTPUT_PRICE_PER_MILLION = 0.50
@@ -341,11 +329,11 @@ class Za3imService:
         self.output_price_per_million = output_price_per_million
 
     def capabilities(self) -> dict:
-        return {"registry_version": "za3im.capabilities/0.1", "capabilities": [
+        return {"registry_version": CAPABILITY_REGISTRY_VERSION, "capabilities": [
             {"capability_id": cap_id, **meta, "live_execution": "disabled_until_finished_product" if not getattr(self.provider, "live_enabled", False) else "opted_in_not_live_verified"} for cap_id, meta in IMPLEMENTED_CAPABILITIES.items()
         ] + [
             {"capability_id": cap_id, "status": "candidate_disabled", "description": "Not integrated or enabled; no working adapter is claimed.", "version": None}
-            for cap_id in ["agent.deer-flow", "agent.agent-zero", "agent.openmanus", "agent.openhands", "browser.browser-use", "browser.skyvern", "experience.export-import", "ads.manage", "video.generate", "deployment.publish", "credits.bill"]
+            for cap_id in CANDIDATE_CAPABILITY_IDS
         ]}
 
     def execute_request(self, request: dict) -> tuple[int, dict]:
@@ -365,7 +353,7 @@ class Za3imService:
             return 400, {"error": {"code": "INVALID_BUSINESS_PROFILE", "message": detail}}
 
         requested = {item["capability_id"] for item in request["capabilities"]}
-        if requested != SUPPORTED_CAPABILITIES:
+        if requested != BUSINESS_PRESENCE_REQUIRED_CAPABILITIES:
             return 501, {"error": {"code": "CAPABILITY_NOT_IMPLEMENTED", "message": "This runtime currently supports exactly website.generate-draft and marketing.copy.generate together. Other capabilities are not enabled."}}
         allowed = set(request["constraints"].get("allowed_capability_ids", []))
         if not requested.issubset(allowed):
