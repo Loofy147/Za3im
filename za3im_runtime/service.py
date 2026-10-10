@@ -389,8 +389,14 @@ class Za3imService:
         generated = None
         usage_event_id = None
         verification_event_ids = []
+        # Contact data is only needed by the local renderer. Keep it out of model egress.
+        provider_profile = {
+            key: profile[key]
+            for key in ("business_name", "wilaya", "service_category", "business_description", "languages")
+            if key in profile
+        }
         try:
-            max_cost = self._max_cost_bound(profile)
+            max_cost = self._max_cost_bound(provider_profile)
             if max_cost > request["budget"]["max_provider_cost_usd"]:
                 result = self._failed_result(request, started_at, "budget_exceeded", "BUDGET_EXCEEDED", f"Conservative provider-cost upper bound USD {max_cost:.8f} exceeds request budget USD {request['budget']['max_provider_cost_usd']:.8f}.", None)
                 result_errors = list(RESULT_VALIDATOR.iter_errors(result))
@@ -399,7 +405,7 @@ class Za3imService:
                 self.store.finish(execution_id, "budget_exceeded", result, result["errors"][0])
                 return 422, self._body(self.store.get_execution(execution_id))
 
-            generated = self.provider.generate_copy(profile, max_output_tokens=MAX_OUTPUT_TOKENS)
+            generated = self.provider.generate_copy(provider_profile, max_output_tokens=MAX_OUTPUT_TOKENS)
             usage = generated.get("usage") if isinstance(generated.get("usage"), dict) else None
             estimated_cost = self._estimated_cost(usage)
             if usage is not None:
