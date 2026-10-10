@@ -29,7 +29,7 @@ class CapabilityRegistryTests(unittest.TestCase):
         )
 
     def test_registry_metadata_is_complete_and_capability_ids_are_normalized(self):
-        self.assertRegex(CAPABILITY_REGISTRY_VERSION, r"^za3im\.capabilities/[0-9]+$")
+        self.assertRegex(CAPABILITY_REGISTRY_VERSION, r"^za3im\.capabilities/[0-9]+\.[0-9]+$")
         for capability_id, metadata in IMPLEMENTED_CAPABILITIES.items():
             with self.subTest(capability_id=capability_id):
                 self.assertRegex(capability_id, r"^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$")
