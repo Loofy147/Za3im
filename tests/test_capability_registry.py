@@ -37,6 +37,11 @@ class CapabilityRegistryTests(unittest.TestCase):
                 self.assertTrue(metadata["status"].strip())
                 self.assertTrue(metadata["description"].strip())
 
+    def test_context_catalog_is_registered_but_not_required_by_website_workflow(self):
+        self.assertIn("context.catalog.read", IMPLEMENTED_CAPABILITIES)
+        self.assertNotIn("context.catalog.read", BUSINESS_PRESENCE_REQUIRED_CAPABILITIES)
+        self.assertIn("source metadata", IMPLEMENTED_CAPABILITIES["context.catalog.read"]["description"])
+
     def test_candidate_registry_never_claims_candidates_are_implemented(self):
         self.assertFalse(set(CANDIDATE_CAPABILITY_IDS) & set(IMPLEMENTED_CAPABILITIES))
         for capability_id in CANDIDATE_CAPABILITY_IDS:

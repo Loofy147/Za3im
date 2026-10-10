@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://za3im.example/schemas/context-source-0.1.json",
+  "title": "Za3im Context Source Locator",
+  "description": "Metadata for a potential source. A locator is not ingested or queryable data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "title",
+    "publisher",
+    "source_kind",
+    "source_uri",
+    "domain",
+    "jurisdiction",
+    "evidence_class",
+    "status",
+    "data_state",
+    "connector_state",
+    "license_status",
+    "refresh_policy",
+    "last_reviewed_date",
+    "content_sha256",
+    "queryable",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": { "const": "za3im.context.source/0.1" },
+    "source_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]{1,127}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "publisher": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "source_kind": {
+      "type": "string",
+      "enum": [
+        "official_profile",
+        "official_api_reference",
+        "official_statistics_portal",
+        "official_legal_publication"
+      ]
+    },
+    "source_uri": { "type": "string", "format": "uri", "maxLength": 2048 },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "macroeconomic",
+        "demographic",
+        "legal",
+        "digital_trust",
+        "general_statistics"
+      ]
+    },
+    "jurisdiction": { "const": "DZA" },
+    "evidence_class": { "const": "primary_source_locator" },
+    "status": {
+      "type": "string",
+      "enum": [
+        "source_only",
+        "candidate_unverified",
+        "quarantined_synthetic",
+        "verified_source_data"
+      ]
+    },
+    "data_state": {
+      "type": "string",
+      "enum": [
+        "not_ingested",
+        "ingested_unverified",
+        "ingested_verified",
+        "synthetic_only"
+      ]
+    },
+    "connector_state": {
+      "type": "string",
+      "enum": ["not_implemented", "implemented", "disabled"]
+    },
+    "license_status": {
+      "type": "string",
+      "enum": ["unknown", "review_required", "recorded"]
+    },
+    "refresh_policy": {
+      "type": "string",
+      "enum": [
+        "versioned_release",
+        "identify_series_before_use",
+        "monitor_for_amendments",
+        "refresh_before_fact_use"
+      ]
+    },
+    "last_reviewed_date": { "type": "string", "format": "date" },
+    "content_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "queryable": { "type": "boolean" },
+    "notes": { "type": "string", "minLength": 1, "maxLength": 2000 }
+  }
+}

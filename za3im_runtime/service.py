@@ -328,7 +328,19 @@ class Za3imService:
 
     def capabilities(self) -> dict:
         return {"registry_version": CAPABILITY_REGISTRY_VERSION, "capabilities": [
-            {"capability_id": cap_id, **meta, "live_execution": "disabled_until_finished_product" if not getattr(self.provider, "live_enabled", False) else "opted_in_not_live_verified"} for cap_id, meta in IMPLEMENTED_CAPABILITIES.items()
+            {
+                "capability_id": cap_id,
+                **meta,
+                "live_execution": (
+                    "not_applicable_read_only"
+                    if cap_id == "context.catalog.read"
+                    else (
+                        "disabled_until_finished_product"
+                        if not getattr(self.provider, "live_enabled", False)
+                        else "opted_in_not_live_verified"
+                    )
+                ),
+            } for cap_id, meta in IMPLEMENTED_CAPABILITIES.items()
         ] + [
             {"capability_id": cap_id, "status": "candidate_disabled", "description": "Not integrated or enabled; no working adapter is claimed.", "version": None}
             for cap_id in CANDIDATE_CAPABILITY_IDS

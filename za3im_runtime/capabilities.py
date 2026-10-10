@@ -27,6 +27,11 @@ IMPLEMENTED_CAPABILITIES: Final[dict[str, dict[str, str]]] = {
         "description": "Render explicitly preferred business contact channels with validated links and escaped public details.",
         "version": "0.1.0",
     },
+    "context.catalog.read": {
+        "status": "implemented_unit_tested_read_only_source_metadata_no_ingestion",
+        "description": "Read a locally bundled, schema-validated catalog of source locators and provenance states; does not fetch or query source data.",
+        "version": "0.1.0",
+    },
 }
 
 # Workflow composition is explicit and independent from the full registry. Registering a
