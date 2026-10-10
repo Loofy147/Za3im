@@ -14,7 +14,11 @@ HTTP request -> request schema and business-profile validation -> capability, eg
 ## Boundaries
 
 - api.py: local HTTP transport, body bounds, optional shared token, routes and artifact response headers.
-- service.py: request/profile validation, capability admission, data/egress/budget checks, execution, artifact generation and response validation; contact links are rendered only when selected and link schemes are checked before success. Provider input is an explicit copy-only field allowlist.
+- config.py: immutable, validated settings parsed once at process startup; environment parsing is not duplicated across service/provider/API layers.
+- capabilities.py: executable registry and explicit workflow composition, separate from example YAML manifests and disabled candidates.
+- ports.py: typed provider and execution-repository contracts plus the shared idempotency-conflict type.
+- api.py: composition root; passes validated settings into provider, service, body-size limit, store and HTTP server.
+- service.py: request/profile validation, capability admission, data/egress/budget checks, execution, artifact generation and response validation; depends on ports rather than the concrete SQLite adapter. Provider input is an explicit copy-only field allowlist.
 - provider.py: one concrete OpenAI Responses API client. Do not abstract it until a second real provider/target demonstrates a shared contract.
 - store.py: SQLite execution, idempotency, event and artifact ledger; transactional claim; unique tenant/idempotency key; startup recovery does not auto-replay interrupted provider work.
 - schemas/: versioned request, result and business-profile schemas.
@@ -24,7 +28,7 @@ HTTP request -> request schema and business-profile validation -> capability, eg
 ## Runtime invariants
 
 1. Request and nested business profile must validate before provider access.
-2. The supported workflow requires website.generate-draft, marketing.copy.generate and website.contact-channels.render.
+2. The business-presence workflow explicitly composes website.generate-draft, marketing.copy.generate and website.contact-channels.render; adding a future registry entry does not change that requirement set.
 3. Request policy must explicitly allow provider.openai.responses, artifact.write, and the api.openai.com domain.
 4. Restricted data is rejected for hosted-model egress.
 5. Same tenant + idempotency key + same body replays a stored run; same key with a different canonical body returns 409.
@@ -35,6 +39,8 @@ HTTP request -> request schema and business-profile validation -> capability, eg
 10. Artifact metadata records SHA-256; hashes are recalculated before download.
 11. No deployment, video, advertising account, messaging, payment, or other external side effect is performed.
 12. Unknown capability candidates do not become integrated just because they are listed in a registry file.
+13. Invalid runtime configuration is rejected before the HTTP server starts; bind address, request limit, provider timeout, output-token limit and pricing estimates come from one validated config object.
+14. Workflow orchestration depends on shared provider/repository ports, not a concrete provider SDK or SQLite implementation; protocol conformance tests exercise current adapters.
 
 ## HTTP surface
 
@@ -78,3 +84,14 @@ Prepared Algerian context/data connectors; real browser/agent integrations; vide
 - Only mark a capability integrated after executable code, tests and a recorded conformance result.
 
 No statement in this document is a production-readiness claim.
+
+
+## Foundation gates and known debt
+
+The initial source-foundation layer is now executable and CI-covered: RuntimeConfig, capability registry/workflow composition, and provider/repository ports. This does not yet mean Za3im is production-ready.
+
+- No verified principal/tenant authorization exists; request `tenant_id` remains untrusted metadata and one shared bearer token is not tenant isolation.
+- SQLite remains a single-instance adapter; no distributed locking, queue or exactly-once external side effects are claimed.
+- Provider and repository boundaries are typed Protocols, but CI currently checks runtime shape and behavior rather than enforcing static type checking across all modules.
+- Schema loading and request/result versioning still need a formal migration/compatibility policy before external context connectors are added.
+- Context retrieval, datasets, ingestion pipelines and external agent engines remain out of scope until these foundation gates stay green.
