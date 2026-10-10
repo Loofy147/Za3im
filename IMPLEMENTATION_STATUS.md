@@ -32,12 +32,13 @@ Observed result: 15 tests passed. python -m compileall -q za3im_runtime tests pa
 
 ## OpenAI integration status
 
-The live client uses POST https://api.openai.com/v1/responses, OPENAI_API_KEY, and configurable ZA3IM_OPENAI_MODEL (default gpt-6-luna). It requests bounded JSON output and extracts usage when returned.
+The client is wired to POST https://api.openai.com/v1/responses, OPENAI_API_KEY, and configurable ZA3IM_OPENAI_MODEL (default gpt-6-luna). Live requests are disabled by default through ZA3IM_ENABLE_LIVE_GPT=false. The service returns LIVE_GPT_DISABLED before claiming an execution or touching the network.
 
 - Implemented: executable client and error mapping.
 - Tested: fake HTTP response/contract.
 - Not established: real API key/model entitlement, a successful live call, actual latency, output quality, current account-specific rate, and invoice reconciliation.
-- No secret was supplied or written to this repository; no billable live request was made.
+- No secret was supplied or written to this repository; no billable live request was made, and no live request is expected before the finished product passes acceptance.
+- Future finished-product validation only: set ZA3IM_ENABLE_LIVE_GPT=true in a controlled environment with an explicitly authorized key after all release gates pass.
 
 ## Accounting
 
@@ -47,7 +48,7 @@ Input/output rates default to GPT-6 Luna standard text-token rates as checked on
 
 | Capability | Status | Evidence required before promotion |
 |---|---|---|
-| Live OpenAI smoke test | UNKNOWN / NOT_RUN | Authorized low-budget request, redacted response ID, model ID, returned usage and failure behavior |
+| Live OpenAI smoke test | DEFERRED_UNTIL_FINISHED_PRODUCT | Only after finished-product acceptance: authorized low-budget request, redacted response ID, model ID, returned usage and failure behavior |
 | Prepared Algerian knowledge connectors | NOT_INTEGRATED | Inventory source, date, coverage, rights and API; test a real query and provenance/freshness |
 | DeerFlow / Agent Zero / OpenManus / OpenHands | CANDIDATE_DISABLED | Pinned revision, license/security review, adapter and contract/conformance tests |
 | Browser Use / Skyvern | CANDIDATE_DISABLED | Same as above plus isolated session, domain control and side-effect validation; Skyvern needs AGPL legal review |
