@@ -14,7 +14,7 @@ HTTP request -> request schema and business-profile validation -> capability, eg
 ## Boundaries
 
 - api.py: local HTTP transport, body bounds, optional shared token, routes and artifact response headers.
-- service.py: request/profile validation, capability admission, data/egress/budget checks, execution, artifact generation and response validation; contact links are rendered only when selected and link schemes are checked before success.
+- service.py: request/profile validation, capability admission, data/egress/budget checks, execution, artifact generation and response validation; contact links are rendered only when selected and link schemes are checked before success. Provider input is an explicit copy-only field allowlist.
 - provider.py: one concrete OpenAI Responses API client. Do not abstract it until a second real provider/target demonstrates a shared contract.
 - store.py: SQLite execution, idempotency, event and artifact ledger; transactional claim; unique tenant/idempotency key; startup recovery does not auto-replay interrupted provider work.
 - schemas/: versioned request, result and business-profile schemas.
@@ -31,7 +31,7 @@ HTTP request -> request schema and business-profile validation -> capability, eg
 6. Concurrent same-key requests are tested within one process; this does not establish distributed locking.
 7. Cost checks use configured rates and conservative bounds. Rates are estimates, not invoice-level guarantees.
 8. Expected model output has exactly six fields; malformed output fails rather than creating artifacts.
-9. Generated copy and public contact text are HTML escaped. Phone/WhatsApp links require unambiguous normalized numbers; email links are validated; social links require absolute HTTPS URLs without credentials; channel preferences suppress unselected communication buttons. Output remains an unpublished local draft.
+9. Only business name, wilaya, service category, business description and language preferences are sent to the model. Phone/email/address/social contact details, opening-hours references and approved-fact reference IDs stay local. Generated copy and public contact text are HTML escaped. Phone/WhatsApp links require normalized numbers; email links are validated; social links require absolute HTTPS URLs without credentials; channel preferences suppress unselected communication buttons. Output remains an unpublished local draft.
 10. Artifact metadata records SHA-256; hashes are recalculated before download.
 11. No deployment, video, advertising account, messaging, payment, or other external side effect is performed.
 12. Unknown capability candidates do not become integrated just because they are listed in a registry file.
