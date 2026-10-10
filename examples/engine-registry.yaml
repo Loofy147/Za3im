@@ -1,110 +1,73 @@
-# Candidate registry only. All entries remain disabled until pinned-version review,
-# license/security review, adapter implementation, and conformance tests pass.
+# Reference registry only; the runtime does not load this file.
+# Candidate agents remain disabled until pinned-commit, license/security review,
+# adapter implementation, and conformance tests have evidence.
 registry_schema_version: za3im.engine-registry/0.1
-last_reviewed: 2026-10-10
-policy:
-  default_enablement: disabled
-  require_immutable_version: true
-  require_license_review: true
-  require_sbom: true
-  require_security_review: true
-  require_adapter_conformance: true
-  require_budget_limit: true
-  require_tenant_scope: true
+runtime_registry_loaded: false
+reviewed_date: 2026-10-10
 
 engines:
-  - id: deer-flow
+  openai-responses:
+    status: implemented_unit_tested_live_provider_not_verified
+    executable_path: za3im_runtime/provider.py
+    capability: provider.openai.responses
+    endpoint: https://api.openai.com/v1/responses
+    credentials: OPENAI_API_KEY environment variable
+    live_smoke_test: not_run
+
+  deer-flow:
     repository: https://github.com/bytedance/deer-flow
-    kind: agent_harness
-    candidate_capabilities: [long_horizon_research, compound_workflows, report_creation, artifact_generation]
-    declared_license: MIT
-    integration_status: candidate
-    enablement: disabled
-    risk_notes: "High-privilege operations; pin a commit; follow upstream security guidance; not a trusted public endpoint by default."
-
-  - id: agent-zero
+    status: candidate_disabled
+    required_gates: [pin_commit, verify_license, sandbox_review, adapter, conformance_tests]
+  agent-zero:
     repository: https://github.com/agent0ai/agent-zero
-    kind: computer_agent
-    candidate_capabilities: [terminal_workspace, filesystem_operations, browser_operations, document_work]
-    declared_license: MIT
-    integration_status: candidate
-    enablement: disabled
-    risk_notes: "Sandbox per tenant/job; disable host bridge unless a task explicitly requires it."
-
-  - id: openmanus
+    status: candidate_disabled
+    required_gates: [pin_commit, verify_license, sandbox_review, adapter, conformance_tests]
+  openmanus:
     repository: https://github.com/FoundationAgents/OpenManus
-    kind: agent_framework
-    candidate_capabilities: [general_agent_execution, browser_research, task_planning]
-    declared_license: verify_at_pinned_commit
-    integration_status: candidate
-    enablement: disabled
-    risk_notes: "Comparison candidate; verify exact license, dependency health, API compatibility, and reliability."
-
-  - id: openhands-sdk
+    status: candidate_disabled
+    required_gates: [pin_commit, verify_license, sandbox_review, adapter, conformance_tests]
+  openhands:
     repository: https://github.com/OpenHands/software-agent-sdk
-    kind: software_agent_sdk
-    candidate_capabilities: [code_generation, repository_modification, test_execution, software_maintenance]
-    declared_license: MIT
-    integration_status: candidate
-    enablement: disabled
-    risk_notes: "Use ephemeral workspaces; patch review and tests required; no production credentials by default."
-
-  - id: browser-use
+    status: candidate_disabled
+    required_gates: [pin_commit, verify_license, ephemeral_workspace, adapter, conformance_tests]
+  browser-use:
     repository: https://github.com/browser-use/browser-use
-    kind: browser_executor
-    candidate_capabilities: [browser_navigation, web_extraction, form_interaction]
-    declared_license: MIT
-    integration_status: candidate
-    enablement: disabled
-    risk_notes: "Allowlisted domains, isolated browser sessions, and side-effect confirmation."
-
-  - id: skyvern
+    status: candidate_disabled
+    required_gates: [pin_commit, verify_license, browser_isolation, adapter, conformance_tests]
+  skyvern:
     repository: https://github.com/Skyvern-AI/skyvern
-    kind: browser_workflow_engine
-    candidate_capabilities: [structured_browser_workflows, form_filling, web_extraction]
-    declared_license: AGPL-3.0
-    integration_status: candidate
-    enablement: disabled
-    commercial_license_gate: required
-    risk_notes: "Do not ship in the commercial hosted product until legal reviews AGPL implications and deployment model."
+    status: candidate_disabled
+    required_gates: [pin_commit, legal_license_review, browser_isolation, adapter, conformance_tests]
+
+  m0-durable-run:
+    repository: https://github.com/Loofy147/m0-durable-run
+    status: reuse_candidate_not_integrated
+    finding: main_has_sqlite_durable_core; HTTP_api_is_on_feature_branch; provider_execution_not_live_verified
+    required_gates: [choose_stable_revision, run_upstream_tests, integrate_without_duplicate_truth, integration_tests]
 
 infrastructure_candidates:
-  - id: litellm
+  litellm:
     repository: https://github.com/BerriAI/litellm
-    candidate_role: model_gateway
-    declared_license: MIT_core_with_enterprise_directory_exception
-    integration_status: evaluate_after_provider_interface
-    enablement: disabled
-    decision_gate: "Compare with a thin first-party provider adapter; pin version and review all used paths."
-
-  - id: temporal
+    status: evaluate_not_installed
+    decision_gate: compare_with_current_concrete_provider_client_before_adding_gateway
+  temporal:
     repository: https://github.com/temporalio/temporal
-    candidate_role: durable_workflow_runtime
-    declared_license: MIT
-    integration_status: evaluate_after_existing_runtime_audit
-    enablement: disabled
-    decision_gate: "Inspect m0-durable-run and current Za3im job durability before adopting."
-
-  - id: e2b
+    status: evaluate_not_installed
+    decision_gate: inspect_m0_durable_run_and_prove_need_for_durable_distributed_workflows
+  e2b:
     repository: https://github.com/e2b-dev/e2b
-    candidate_role: isolated_execution_sandbox
-    declared_license: Apache-2.0
-    integration_status: candidate
-    enablement: disabled
-    decision_gate: "Compare self-hosted and hosted cost, isolation, network, persistence, and data-handling properties."
+    status: evaluate_not_installed
+    decision_gate: compare_isolation_cost_and_data_handling_with_current_local_mvp
 
-protocols_and_observability:
-  - id: mcp
+protocols:
+  mcp:
     specification: https://modelcontextprotocol.io/
-    role: tool_and_context_interoperability
-    use_policy: "Register known servers; apply per-capability auth and tool allowlists."
-
-  - id: a2a
+    status: research_only_not_integrated
+  a2a:
     specification: https://a2a-protocol.org/
-    role: external_agent_interoperability
-    use_policy: "Use only where independently deployed agent interoperability is needed."
+    status: research_only_not_integrated
 
-  - id: opentelemetry
-    specification: https://opentelemetry.io/docs/specs/semconv/
-    role: tracing_metrics_logs
-    use_policy: "Propagate correlation IDs; scrub secrets and sensitive prompt content."
+observability:
+  opentelemetry:
+    specification: https://opentelemetry.io/docs/
+    status: not_integrated
