@@ -1,6 +1,7 @@
 """HTTP API for the first tested Za3im execution vertical slice."""
 from __future__ import annotations
 
+import hashlib
 import hmac
 import json
 import os
@@ -32,9 +33,7 @@ def make_handler(service: Za3imService, api_token: str = ""):
         def _authenticated(self) -> bool:
             if not api_token:
                 return True
-            supplied = self.headers.get("Authorization", "")
-            expected = f"Bearer {api_token}"
-            return hmac.compare_digest(supplied, expected)
+            return hmac.compare_digest(self.headers.get("Authorization", ""), f"Bearer {api_token}")
 
         def _require_auth(self) -> bool:
             if self._authenticated():
@@ -60,10 +59,7 @@ def make_handler(service: Za3imService, api_token: str = ""):
             match = re.fullmatch(r"/v1/executions/([^/]+)", path)
             if match:
                 record = service.store.get_execution(match.group(1))
-                if record is None:
-                    self._send_json(404, {"error": {"code": "NOT_FOUND", "message": "Execution not found"}})
-                else:
-                    self._send_json(200, service._body(record))
+                self._send_json(200 if record else 404, service._body(record) if record else {"error": {"code": "NOT_FOUND", "message": "Execution not found"}})
                 return
             match = re.fullmatch(r"/v1/artifacts/([A-Za-z0-9_-]+)", path)
             if match:
@@ -77,7 +73,6 @@ def make_handler(service: Za3imService, api_token: str = ""):
                 except OSError:
                     self._send_json(410, {"error": {"code": "ARTIFACT_UNAVAILABLE", "message": "Artifact file is not available"}})
                     return
-                import hashlib
                 if hashlib.sha256(raw).hexdigest() != artifact["sha256"]:
                     self._send_json(500, {"error": {"code": "ARTIFACT_INTEGRITY_FAILURE", "message": "Stored artifact hash did not match its ledger entry"}})
                     return
@@ -94,38 +89,35 @@ def make_handler(service: Za3imService, api_token: str = ""):
             self._send_json(404, {"error": {"code": "NOT_FOUND", "message": "Route not found"}})
 
         def do_POST(self):  # noqa: N802
-            path = urlsplit(self.path).path
-            if path != "/v1/executions":
+            if urlsplit(self.path).path != "/v1/executions":
                 self._send_json(404, {"error": {"code": "NOT_FOUND", "message": "Route not found"}})
                 return
             if not self._require_auth():
                 return
             content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
             if content_type != "application/json":
-                self._send_json(415, {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "Content-Type must be application/json"})
+                self._send_json(415, {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "Content-Type must be application/json"}})
                 return
             try:
                 length = int(self.headers.get("Content-Length", "-1"))
             except ValueError:
-                self._send_json(400, {"error": {"code": "INVALID_CONTENT_LENGTH", "message": "Content-Length must be an integer"})
+                self._send_json(400, {"error": {"code": "INVALID_CONTENT_LENGTH", "message": "Content-Length must be an integer"}})
                 return
             if length < 0:
-                self._send_json(411, {"error": {"code": "LENGTH_REQUIRED", "message": "Content-Length is required"})
+                self._send_json(411, {"error": {"code": "LENGTH_REQUIRED", "message": "Content-Length is required"}})
                 return
             if length > MAX_BODY_BYTES:
-                self._send_json(413, {"error": {"code": "BODY_TOO_LARGE", "message": "Request body exceeds the configured limit"})
+                self._send_json(413, {"error": {"code": "BODY_TOO_LARGE", "message": "Request body exceeds the configured limit"}})
                 return
             try:
-                body = self.rfile.read(length)
-                request = json.loads(body.decode("utf-8"))
+                request = json.loads(self.rfile.read(length).decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
-                self._send_json(400, {"error": {"code": "INVALID_JSON", "message": "Request body must be UTF-8 JSON"})
+                self._send_json(400, {"error": {"code": "INVALID_JSON", "message": "Request body must be UTF-8 JSON"}})
                 return
             status, response = service.execute_request(request)
             self._send_json(status, response)
 
         def log_message(self, fmt, *args):
-            # Do not log request bodies, authorization headers or query strings.
             print("[za3im-http] " + (fmt % args))
 
     return Handler
@@ -137,9 +129,7 @@ def serve() -> None:
     api_token = os.getenv("ZA3IM_API_TOKEN", "").strip()
     if host not in {"127.0.0.1", "localhost", "::1"} and not api_token:
         raise SystemExit("Refusing non-loopback bind without ZA3IM_API_TOKEN; this runtime is not a production multi-tenant service.")
-    db_path = os.getenv("ZA3IM_DB_PATH", "za3im_state.sqlite3")
-    artifact_dir = os.getenv("ZA3IM_ARTIFACT_DIR", "za3im_artifacts")
-    store = ExecutionStore(db_path, artifact_dir)
+    store = ExecutionStore(os.getenv("ZA3IM_DB_PATH", "za3im_state.sqlite3"), os.getenv("ZA3IM_ARTIFACT_DIR", "za3im_artifacts"))
     provider = OpenAIResponsesClient()
     service = Za3imService(store, provider)
     server = ThreadingHTTPServer((host, port), make_handler(service, api_token))
