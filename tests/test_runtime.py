@@ -13,7 +13,7 @@ from threading import Thread
 
 from za3im_runtime.api import make_handler
 from za3im_runtime.provider import OpenAIResponsesClient, ProviderError
-from za3im_runtime.service import Za3imService
+from za3im_runtime.service import Za3imService, verify_html
 from za3im_runtime.store import ExecutionStore
 
 
@@ -71,7 +71,8 @@ def request(execution_id="exec-test-001", idem="idem-test-001", name="صالون
         "context_references": [],
         "capabilities": [
             {"capability_id": "website.generate-draft", "version_constraint": "^0.1", "input_reference_ids": []},
-            {"capability_id": "marketing.copy.generate", "version_constraint": "^0.1", "input_reference_ids": []}
+            {"capability_id": "marketing.copy.generate", "version_constraint": "^0.1", "input_reference_ids": []},
+            {"capability_id": "website.contact-channels.render", "version_constraint": "^0.1", "input_reference_ids": []}
         ],
         "constraints": {
             "deadline_at": None,
@@ -81,7 +82,7 @@ def request(execution_id="exec-test-001", idem="idem-test-001", name="صالون
             "data_classification": "confidential",
             "approval_mode": "external_actions",
             "network_policy": "allowlist_only",
-            "allowed_capability_ids": ["website.generate-draft", "marketing.copy.generate", "artifact.write", "provider.openai.responses"],
+            "allowed_capability_ids": ["website.generate-draft", "marketing.copy.generate", "website.contact-channels.render", "artifact.write", "provider.openai.responses"],
             "allowed_domain_names": ["api.openai.com"],
             "allowed_model_providers": ["openai"],
             "allow_subdelegation": False
@@ -160,6 +161,90 @@ class RuntimeTests(unittest.TestCase):
         self.store = ExecutionStore(os.path.join(self.root, "state.sqlite3"), os.path.join(self.root, "artifacts"))
         self.provider = FakeProvider()
         self.service = Za3imService(self.store, self.provider)
+
+    def test_contact_channels_follow_preferences_and_filter_unsafe_links(self):
+        payload = request()
+        contact = payload["input_payload"]["business_profile"]["contact_preferences"]
+        contact.update({
+            "preferred_channels": ["phone", "whatsapp", "email", "social"],
+            "public_phone": "0555 000 000",
+            "public_email": "salon@example.dz",
+            "public_address": "شارع <الحرية> & المدينة",
+            "social_profile_references": [
+                "javascript:alert(1)",
+                "http://insecure.example/profile",
+                "https://www.instagram.com/salon.example"
+            ]
+        })
+        status, body = self.service.execute_request(payload)
+        self.assertEqual(status, 201)
+        record = self.store.get_artifact(next(
+            item["artifact_id"] for item in body["result"]["artifacts"] if item["role"] == "website_html"
+        ))
+        with open(record["path"], encoding="utf-8") as stream:
+            document = stream.read()
+        self.assertIn('href="tel:+213555000000"', document)
+        self.assertIn('href="https://wa.me/213555000000"', document)
+        self.assertIn('href="mailto:salon@example.dz"', document)
+        self.assertIn('https://www.instagram.com/salon.example', document)
+        self.assertIn('rel="noopener noreferrer"', document)
+        self.assertIn("شارع &lt;الحرية&gt; &amp; المدينة", document)
+        self.assertNotIn("javascript:", document.lower())
+        self.assertNotIn("http://insecure.example", document)
+        check_ids = {check["check_id"] for check in body["result"]["verification"]["checks"]}
+        self.assertIn("contact-links-safety", check_ids)
+
+    def test_unselected_contact_channels_are_not_exposed(self):
+        payload = request()
+        contact = payload["input_payload"]["business_profile"]["contact_preferences"]
+        contact.update({
+            "preferred_channels": ["website_form"],
+            "public_phone": "+213555000000",
+            "public_email": "private@example.dz",
+            "public_address": "Blida centre",
+            "social_profile_references": ["https://www.instagram.com/private.profile"]
+        })
+        status, body = self.service.execute_request(payload)
+        self.assertEqual(status, 201)
+        record = self.store.get_artifact(next(
+            item["artifact_id"] for item in body["result"]["artifacts"] if item["role"] == "website_html"
+        ))
+        with open(record["path"], encoding="utf-8") as stream:
+            document = stream.read()
+        self.assertNotIn("tel:+213555000000", document)
+        self.assertNotIn("wa.me/213555000000", document)
+        self.assertNotIn("mailto:private@example.dz", document)
+        self.assertNotIn("instagram.com/private.profile", document)
+        self.assertIn("Blida centre", document)
+
+    def test_arabic_indic_algerian_phone_is_normalized_for_whatsapp(self):
+        payload = request()
+        contact = payload["input_payload"]["business_profile"]["contact_preferences"]
+        contact["preferred_channels"] = ["whatsapp"]
+        contact["public_phone"] = "٠٥٥٥٠٠٠٠٠٠"
+        status, body = self.service.execute_request(payload)
+        self.assertEqual(status, 201)
+        record = self.store.get_artifact(next(
+            item["artifact_id"] for item in body["result"]["artifacts"] if item["role"] == "website_html"
+        ))
+        with open(record["path"], encoding="utf-8") as stream:
+            document = stream.read()
+        self.assertIn('href="https://wa.me/213555000000"', document)
+        self.assertNotIn('href="tel:', document)
+
+    def test_html_verifier_rejects_script_scheme_contact_link(self):
+        status, body = self.service.execute_request(request())
+        self.assertEqual(status, 201)
+        record = self.store.get_artifact(next(
+            item["artifact_id"] for item in body["result"]["artifacts"] if item["role"] == "website_html"
+        ))
+        with open(record["path"], encoding="utf-8") as stream:
+            document = stream.read()
+        self.assertIn('href="tel:+213555000000"', document)
+        mutated = document.replace('href="tel:+213555000000"', 'href="javascript:alert(1)"', 1)
+        valid, message = verify_html(mutated)
+        self.assertFalse(valid)
+        self.assertIn("safe-link", message)
 
     def test_success_generates_two_artifacts_and_verifiable_hashes(self):
         status, body = self.service.execute_request(request())
@@ -327,6 +412,7 @@ class RuntimeTests(unittest.TestCase):
         ids = {item["capability_id"] for item in caps["capabilities"] if item["status"].startswith("implemented")}
         self.assertIn("website.generate-draft", ids)
         self.assertIn("marketing.copy.generate", ids)
+        self.assertIn("website.contact-channels.render", ids)
 
     def test_api_token_is_required_when_configured(self):
         server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(self.service, api_token="test-secret-token"))
