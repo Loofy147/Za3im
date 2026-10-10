@@ -25,13 +25,20 @@ class OpenAIResponsesClient:
         model: str | None = None,
         urlopen: Callable[..., Any] | None = None,
         timeout_seconds: float = 35.0,
+        live_enabled: bool | None = None,
     ) -> None:
         self.api_key = (api_key if api_key is not None else os.getenv("OPENAI_API_KEY", "")).strip()
         self.model = (model or os.getenv("ZA3IM_OPENAI_MODEL", "gpt-6-luna")).strip()
         self._urlopen = urlopen or urllib.request.urlopen
         self.timeout_seconds = timeout_seconds
+        # Fail closed: live API requests are opt-in only after the finished-product gate.
+        if live_enabled is None:
+            live_enabled = os.getenv("ZA3IM_ENABLE_LIVE_GPT", "false").strip().lower() in {"1", "true", "yes"}
+        self.live_enabled = live_enabled
 
     def generate_copy(self, profile: dict, max_output_tokens: int = 1200) -> dict:
+        if not self.live_enabled:
+            raise ProviderError("Live GPT requests are disabled until finished-product validation; no provider request was sent")
         if not self.api_key:
             raise ProviderError("OPENAI_API_KEY is not configured")
         if not self.model:
