@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "za3im-runtime"
+version = "0.1.0"
+description = "First tested execution vertical slice for Za3im"
+requires-python = ">=3.11"
+dependencies = ["jsonschema>=4.23,<5"]
+
+[project.scripts]
+za3im-serve = "za3im_runtime.api:serve"
+
+[tool.setuptools]
+packages = ["za3im_runtime", "schemas"]
+
+[tool.setuptools.package-data]
+schemas = ["*.json"]
