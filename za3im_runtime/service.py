@@ -5,7 +5,10 @@ import hashlib
 import html
 import json
 import os
+import re
 import tempfile
+import unicodedata
+from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
@@ -32,6 +35,11 @@ IMPLEMENTED_CAPABILITIES = {
     "marketing.copy.generate": {
         "status": "implemented_unit_tested_live_provider_not_verified",
         "description": "Generate and store draft promotional copy alongside the website artifact.",
+        "version": "0.1.0",
+    },
+    "website.contact-channels.render": {
+        "status": "implemented_unit_tested_live_gpt_disabled_until_finished_product",
+        "description": "Render explicitly preferred business contact channels with validated links and escaped public details.",
         "version": "0.1.0",
     },
 }
@@ -100,6 +108,59 @@ def validate_generated_copy(content: object) -> dict:
     }
 
 
+def _normalize_phone(value: object) -> str | None:
+    """Return E.164 digits for an explicit international number or an Algerian local number."""
+    if not isinstance(value, str):
+        return None
+    raw = value.strip()
+    if not raw or ("+" in raw and not raw.startswith("+")):
+        return None
+    if not all(ch.isdecimal() or ch.isspace() or ch in "+().-" for ch in raw):
+        return None
+    digits = "".join(str(unicodedata.digit(ch)) for ch in raw if ch.isdecimal())
+    if raw.startswith("+"):
+        pass
+    elif digits.startswith("00"):
+        digits = digits[2:]
+    elif digits.startswith("213") and len(digits) == 12:
+        pass
+    elif digits.startswith("0") and len(digits) == 10:
+        digits = "213" + digits[1:]
+    else:
+        # Do not guess an international prefix for an ambiguous local number.
+        return None
+    if not re.fullmatch(r"[1-9][0-9]{6,14}", digits):
+        return None
+    return digits
+
+
+def _safe_https_url(value: object) -> str | None:
+    """Accept public profile links only as absolute HTTPS URLs without credentials."""
+    if not isinstance(value, str) or not value or len(value) > 1000 or any(ch.isspace() or ord(ch) < 0x20 for ch in value):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if parsed.scheme.lower() != "https" or not parsed.hostname:
+            return None
+        if parsed.username is not None or parsed.password is not None:
+            return None
+        port = parsed.port  # Raises ValueError for malformed port syntax.
+        if port is not None and not 1 <= port <= 65535:
+            return None
+    except ValueError:
+        return None
+    return value
+
+
+def _safe_email(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    address = value.strip()
+    if len(address) > 254 or not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", address):
+        return None
+    return address
+
+
 def render_html(profile: dict, copy: dict, locale: str) -> str:
     rtl = locale.lower().startswith("ar")
     lang = "ar" if rtl else ("fr" if locale.lower().startswith("fr") else "en")
@@ -112,11 +173,62 @@ def render_html(profile: dict, copy: dict, locale: str) -> str:
     cta = html.escape(copy["cta"])
     service_items = "\n".join(f"        <li>{html.escape(item)}</li>" for item in copy["services"])
     contact = profile.get("contact_preferences", {})
-    public_phone = contact.get("public_phone")
-    phone_link = ""
-    if isinstance(public_phone, str) and public_phone.strip():
-        safe_phone = html.escape(public_phone.strip(), quote=True)
-        phone_link = f'<p class="contact"><a href="tel:{safe_phone}">{safe_phone}</a></p>'
+    channels = set(contact.get("preferred_channels", []))
+    labels = {
+        "ar": {
+            "phone": "اتصل هاتفياً",
+            "whatsapp": "تواصل عبر واتساب",
+            "email": "راسلنا بالبريد الإلكتروني",
+            "address": "العنوان",
+            "social": "الملف الاجتماعي",
+        },
+        "fr": {
+            "phone": "Appeler",
+            "whatsapp": "Contacter sur WhatsApp",
+            "email": "Envoyer un e-mail",
+            "address": "Adresse",
+            "social": "Profil social",
+        },
+        "en": {
+            "phone": "Call",
+            "whatsapp": "Message on WhatsApp",
+            "email": "Email",
+            "address": "Address",
+            "social": "Social profile",
+        },
+    }[lang]
+    contact_links: list[str] = []
+    normalized_phone = _normalize_phone(contact.get("public_phone"))
+    if normalized_phone and "phone" in channels:
+        contact_links.append(
+            f'<a class="cta" href="tel:+{normalized_phone}">{labels["phone"]}</a>'
+        )
+    if normalized_phone and "whatsapp" in channels:
+        contact_links.append(
+            f'<a class="cta" href="https://wa.me/{normalized_phone}" target="_blank" rel="noopener noreferrer">{labels["whatsapp"]}</a>'
+        )
+    email_address = _safe_email(contact.get("public_email"))
+    if email_address and "email" in channels:
+        contact_links.append(
+            f'<a class="cta" href="mailto:{html.escape(email_address, quote=True)}">{labels["email"]}</a>'
+        )
+    if "social" in channels:
+        for reference in contact.get("social_profile_references", [])[:8]:
+            safe_url = _safe_https_url(reference)
+            if safe_url:
+                host = urlsplit(safe_url).hostname or "profile"
+                display_host = html.escape(host.removeprefix("www."))
+                aria_label = html.escape(labels["social"] + ": " + host, quote=True)
+                contact_links.append(
+                    f'<a href="{html.escape(safe_url, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="{aria_label}">{display_host}</a>'
+                )
+    address = contact.get("public_address")
+    address_markup = ""
+    if isinstance(address, str) and address.strip():
+        address_markup = f'<p class="contact-address"><strong>{labels["address"]}:</strong> {html.escape(address.strip())}</p>'
+    contact_markup = "\n".join(contact_links + ([address_markup] if address_markup else []))
+    if not contact_markup:
+        contact_markup = '<p class="contact-unavailable">—</p>'
     return f'''<!doctype html>
 <html lang="{lang}" dir="{direction}">
 <head>
@@ -134,24 +246,29 @@ def render_html(profile: dict, copy: dict, locale: str) -> str:
     header p {{ max-width: 680px; margin: 0 auto; font-size: 1.15rem; }}
     main {{ max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }}
     section {{ margin: 1.5rem 0; padding: 1.5rem; border-radius: 1rem; background: #fff; box-shadow: 0 8px 28px #183a350d; }}
-    li {{ margin: .5rem 0; }} .cta {{ display: inline-block; padding: .75rem 1.2rem; border-radius: .6rem; background: #183a35; color: white; text-decoration: none; font-weight: 700; }}
+    li {{ margin: .5rem 0; }}
+    .contact-links {{ display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: 1rem; }}
+    .contact-links a.cta {{ display: inline-block; padding: .75rem 1.2rem; border-radius: .6rem; background: #183a35; color: white; text-decoration: none; font-weight: 700; }}
+    .contact-links a:focus-visible {{ outline: 3px solid #376d60; outline-offset: 3px; }}
+    .contact-address {{ overflow-wrap: anywhere; }}
     footer {{ padding: 1rem; text-align: center; color: #4d5a62; }}
   </style>
 </head>
 <body>
   <header><h1>{title}</h1><p>{tagline}</p></header>
   <main>
-    <section><h2>{'مرحباً بك' if rtl else 'Welcome'}</h2><p>{intro}</p><p>{name} · {wilaya}</p></section>
-    <section><h2>{'خدماتنا' if rtl else 'Services'}</h2><ul>
+    <section><h2>{'مرحباً بك' if rtl else ('Bienvenue' if lang == 'fr' else 'Welcome')}</h2><p>{intro}</p><p>{name} · {wilaya}</p></section>
+    <section><h2>{'خدماتنا' if rtl else ('Services' if lang == 'fr' else 'Services')}</h2><ul>
 {service_items}
     </ul></section>
-    <section><h2>{'تواصل معنا' if rtl else 'Contact'}</h2><p>{cta}</p>{phone_link}</section>
+    <section><h2>{'تواصل معنا' if rtl else ('Contact' if lang == 'fr' else 'Contact')}</h2><p>{cta}</p><div class="contact-links">
+{contact_markup}
+    </div></section>
   </main>
-  <footer>{name} · {wilaya} · {('مسودة غير منشورة أنشأها زعيم' if rtl else 'Unpublished draft generated by Za3im')}</footer>
+  <footer>{name} · {wilaya} · {('مسودة غير منشورة أنشأها زعيم' if rtl else ('Brouillon non publié créé par Za3im' if lang == 'fr' else 'Unpublished draft generated by Za3im'))}</footer>
 </body>
 </html>
 '''
-
 
 class _HTMLStructureChecker(HTMLParser):
     def __init__(self):
@@ -162,13 +279,32 @@ class _HTMLStructureChecker(HTMLParser):
         self.has_h1 = False
         self.has_viewport = False
         self.has_script = False
+        self.has_unsafe_link = False
 
     def handle_starttag(self, tag, attrs):
         self.tags.append(tag.lower())
+        attributes = dict(attrs)
         if tag.lower() == "title": self.in_title = True
         if tag.lower() == "h1": self.has_h1 = True
         if tag.lower() == "script": self.has_script = True
-        if tag.lower() == "meta" and dict(attrs).get("name", "").lower() == "viewport": self.has_viewport = True
+        if tag.lower() == "meta" and attributes.get("name", "").lower() == "viewport": self.has_viewport = True
+        if tag.lower() == "a":
+            href = attributes.get("href", "")
+            try:
+                parsed = urlsplit(href)
+                if parsed.scheme.lower() == "https":
+                    safe_link = bool(parsed.hostname) and parsed.username is None and parsed.password is None
+                    _ = parsed.port
+                elif parsed.scheme.lower() == "tel":
+                    safe_link = bool(re.fullmatch(r"tel:\+[1-9][0-9]{6,14}", href, re.IGNORECASE))
+                elif parsed.scheme.lower() == "mailto":
+                    safe_link = bool(re.fullmatch(r"mailto:[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", href, re.IGNORECASE))
+                else:
+                    safe_link = False
+            except ValueError:
+                safe_link = False
+            if not safe_link:
+                self.has_unsafe_link = True
 
     def handle_endtag(self, tag):
         if tag.lower() == "title": self.in_title = False
@@ -182,10 +318,10 @@ def verify_html(document: str) -> tuple[bool, str]:
     parser.feed(document)
     parser.close()
     valid = all(tag in parser.tags for tag in ("html", "head", "body", "title", "header", "main", "footer"))
-    valid = valid and parser.has_title_text and parser.has_h1 and parser.has_viewport and not parser.has_script
+    valid = valid and parser.has_title_text and parser.has_h1 and parser.has_viewport and not parser.has_script and not parser.has_unsafe_link
     if not valid:
-        return False, "HTML draft failed required structural/safety checks"
-    return True, "HTML structure, title, heading, viewport and no-inline-script checks passed"
+        return False, "HTML draft failed required structure, no-script or safe-link checks"
+    return True, "HTML structure, title, heading, viewport, no-inline-script and safe-link checks passed"
 
 
 class Za3imService:
