@@ -14,6 +14,7 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Business profile schema validation | UNIT_TESTED | Invalid profile rejected before provider call |
 | OpenAI Responses client | UNIT_TESTED / LIVE_NOT_RUN | Mocked transport validates endpoint, JSON mode, output parsing, request ID and token usage |
 | Website draft generation | UNIT_TESTED | Static HTML generated from validated model copy; Arabic RTL support; HTML text escaping |
+| Contact-channel renderer | UNIT_TESTED | Registered `website.contact-channels.render`; preference-gated phone/WhatsApp/email/social links, escaped public address, unsafe-scheme rejection, malformed-number rejection, and explicit provider-input allowlist excluding contact/reference fields; six feature regressions passed in CI run [#24](https://github.com/Loofy147/Za3im/actions/runs/38064114962) on source revision `2fc14cac3adc5f4783cada2e372d8cf04710f01a` |
 | Promotional-copy artifact | UNIT_TESTED | Markdown draft produced alongside the HTML |
 | SQLite execution/event/artifact ledger | UNIT_TESTED | Transactional idempotency claim, durable rows and event references |
 | Idempotency | UNIT_TESTED | Exact retry replays result; same key with modified request gets 409 |
@@ -25,10 +26,10 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Local HTTP flow | UNIT_TESTED | Test starts a real local HTTP server and calls health, execute and artifact routes |
 | Event/evidence references | UNIT_TESTED | Returned event references point to persisted events |
 | Wheel contents | LOCALLY_VERIFIED | Local wheel built with pip wheel --no-deps --no-build-isolation; runtime modules and schemas included |
-| CI workflow | CONFIGURED_NOT_RUN_ON_GITHUB | GitHub Actions workflow added; inspect run for exact committed SHA |
+| CI workflow | PASS | GitHub Actions run [#24](https://github.com/Loofy147/Za3im/actions/runs/38064114962) passed compile and all 23 deterministic tests on `2fc14cac3adc5f4783cada2e372d8cf04710f01a` |
 
 Local test command: python -m unittest discover -s tests -v  
-Observed result before the live-GPT gate change: 15 tests passed. The suite now contains 17 tests, including direct assertions that live GPT is blocked before network access and before an execution is claimed. GitHub Actions passed the 17-test suite on revision 258c975eb392a1a7238af082e398596337d01e87. The documentation update will trigger a fresh run for its own revision. Request, business-profile, result and example JSON validation passed. A local wheel was built and included the three JSON schema resources.
+GitHub Actions run [#24](https://github.com/Loofy147/Za3im/actions/runs/38064114962) passed on source revision `2fc14cac3adc5f4783cada2e372d8cf04710f01a`: `python -m compileall -q za3im_runtime tests` and `python -m unittest discover -s tests -v` both passed; the suite reported 23 tests in 1.830 seconds. Six feature regressions cover preference-gated channels, unsafe URL filtering, Arabic-Indic Algerian phone normalization, rejection of `javascript:` links, contact/reference data excluded from model egress, and malformed repeated-plus phone rejection. This is deterministic CI evidence, not live-provider evidence. Live GPT stayed disabled, and no provider request was sent. Subsequent commits only updated README, architecture and this evidence ledger; executable/test files remain code-equivalent to the tested source revision. A local wheel was built and included the three JSON schema resources.
 
 ## OpenAI integration status
 

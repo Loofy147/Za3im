@@ -4,7 +4,7 @@ Za3im is intended to become an Algerian-market AI execution platform. Users desc
 
 ## What actually runs in this revision
 
-A narrow local vertical slice accepts a validated Algerian business profile, calls the OpenAI Responses API to produce structured draft copy, renders an unpublished HTML website and a promotional-copy Markdown artifact, stores execution/events/artifact metadata in SQLite, and serves artifacts with SHA-256 rechecking.
+A narrow local vertical slice validates an Algerian business profile, has a concrete OpenAI Responses API client behind a fail-closed live-request gate, and renders unpublished HTML and promotional-copy drafts through the tested service path. Contact buttons are emitted only for explicitly preferred channels; phone numbers are normalized before link creation, email is validated, social links require HTTPS, public text is HTML-escaped, and unsafe anchor schemes fail verification. The provider receives only copy-relevant business name, wilaya, category, description and language fields; phone/email/address/social contacts, opening-hours references and approved-fact references remain local. SQLite stores execution/event/artifact metadata and artifact downloads recheck SHA-256. Deterministic tests use a fake provider; live GPT remains disabled.
 
 Not implemented: Algerian knowledge connectors, agent-framework adapters, website deployment, video generation, advertising integrations, payments/credits, portable experience export/import, production tenant authentication, distributed execution, and live-provider verification.
 
@@ -47,7 +47,7 @@ The default input/output rates match the GPT-6 Luna standard text-token rates sh
 - GET /v1/executions/{execution_id} — persisted execution status/result.
 - GET /v1/artifacts/{artifact_id} — artifact download with integrity recheck.
 
-The first workflow requires website.generate-draft and marketing.copy.generate, explicitly allows provider.openai.responses and artifact.write, requires api.openai.com in the egress allowlist, and blocks restricted data from hosted-model egress.
+The first workflow requires website.generate-draft, marketing.copy.generate and website.contact-channels.render, explicitly allows provider.openai.responses and artifact.write, requires api.openai.com in the egress allowlist, and blocks restricted data from hosted-model egress.
 
 Example using the synthetic profile request:
 
@@ -62,7 +62,7 @@ When a token is configured, send Authorization: Bearer $ZA3IM_API_TOKEN on prote
     python -m unittest discover -s tests -v
     python -m compileall -q za3im_runtime tests
 
-The tests use mocked provider HTTP and a fake provider while exercising the local HTTP server and SQLite implementation. Live GPT is deliberately disabled by default in the runtime and is not required for intermediate development. Only after the finished-product acceptance checklist is met should the dedicated live-validation environment set ZA3IM_ENABLE_LIVE_GPT=true and provide OPENAI_API_KEY. The tests do not prove a live OpenAI request, deployment, customer billing, production security, or distributed execution. GitHub Actions runs deterministic checks on pushes and pull requests.
+The tests use mocked provider HTTP and a fake provider while exercising opt-in contact rendering, link-scheme rejection, the local HTTP server and SQLite implementation. Live GPT is deliberately disabled by default in the runtime and is not required for intermediate development. Only after the finished-product acceptance checklist is met should the dedicated live-validation environment set ZA3IM_ENABLE_LIVE_GPT=true and provide OPENAI_API_KEY. The tests do not prove a live OpenAI request, deployment, customer billing, production security, or distributed execution. GitHub Actions runs deterministic checks on pushes and pull requests.
 
 ## Evidence and implementation status
 
