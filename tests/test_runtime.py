@@ -27,10 +27,12 @@ class FakeProvider:
         self.delay = delay
         self.fail = fail
         self.lock = threading.Lock()
+        self.last_profile = None
 
     def generate_copy(self, profile: dict, max_output_tokens: int = 1200) -> dict:
         with self.lock:
             self.calls += 1
+            self.last_profile = dict(profile)
         if self.delay:
             time.sleep(self.delay)
         if self.fail:
@@ -245,6 +247,54 @@ class RuntimeTests(unittest.TestCase):
         valid, message = verify_html(mutated)
         self.assertFalse(valid)
         self.assertIn("safe-link", message)
+
+    def test_contact_fields_are_not_sent_to_model_provider(self):
+        payload = request()
+        profile = payload["input_payload"]["business_profile"]
+        contact = profile["contact_preferences"]
+        contact.update({
+            "preferred_channels": ["phone", "email", "social"],
+            "public_phone": "+213555000000",
+            "public_email": "private@example.dz",
+            "public_address": "Private avenue 42",
+            "social_profile_references": ["https://social.example/private-profile"]
+        })
+        profile["opening_hours_reference"] = "hours-reference-secret"
+        profile["approved_facts_reference_ids"] = ["private-fact-reference-secret"]
+        status, _body = self.service.execute_request(payload)
+        self.assertEqual(status, 201)
+        forwarded = self.provider.last_profile
+        self.assertIsNotNone(forwarded)
+        self.assertEqual(
+            set(forwarded),
+            {"business_name", "wilaya", "service_category", "business_description", "languages"}
+        )
+        encoded = json.dumps(forwarded, ensure_ascii=False)
+        for local_only in (
+            "+213555000000",
+            "private@example.dz",
+            "Private avenue 42",
+            "social.example/private-profile",
+            "hours-reference-secret",
+            "private-fact-reference-secret"
+        ):
+            self.assertNotIn(local_only, encoded)
+
+    def test_malformed_phone_is_not_emitted_as_a_contact_link(self):
+        payload = request()
+        contact = payload["input_payload"]["business_profile"]["contact_preferences"]
+        contact["preferred_channels"] = ["phone", "whatsapp"]
+        contact["public_phone"] = "++213 555 000 000"
+        status, body = self.service.execute_request(payload)
+        self.assertEqual(status, 201)
+        record = self.store.get_artifact(next(
+            item["artifact_id"] for item in body["result"]["artifacts"] if item["role"] == "website_html"
+        ))
+        with open(record["path"], encoding="utf-8") as stream:
+            document = stream.read()
+        self.assertNotIn("href=\"tel:", document)
+        self.assertNotIn("wa.me/", document)
+        self.assertTrue(body["result"]["verification"]["status"] == "passed")
 
     def test_success_generates_two_artifacts_and_verifiable_hashes(self):
         status, body = self.service.execute_request(request())
