@@ -1,6 +1,6 @@
 # Za3im implementation status and evidence ledger
 
-Revision: source foundation v0.1, 2026-10-10. The status here refers to code and deterministic CI evidence; the real provider call has not run.
+Revision: Za3im source foundation v0.1 merged to main at `e78969af792b6f78f543c1b79a637a9d888572e0`. The real provider call has not run.
 
 ## Verdict
 
@@ -36,10 +36,10 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Local HTTP flow | UNIT_TESTED | Test starts a real local HTTP server and calls health, execute and artifact routes |
 | Event/evidence references | UNIT_TESTED | Returned event references point to persisted events |
 | Wheel contents | LOCALLY_VERIFIED | Local wheel built with pip wheel --no-deps --no-build-isolation; runtime modules and schemas included |
-| CI workflow | PASS | GitHub Actions run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325) passed compile, all 45 deterministic tests and wheel-content checks with executable/test revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37` and CI configuration revision `96e15c9f73bafa8e0b8a5d22999463766a6c93f2` |
+| CI workflow | PASS | Feature-head run [#53](https://github.com/Loofy147/Za3im/actions/runs/38074908427) and post-merge main run [#54](https://github.com/Loofy147/Za3im/actions/runs/38074954353) passed; main merge commit `e78969af792b6f78f543c1b79a637a9d888572e0` compiled, passed all 45 tests and verified wheel contents |
 
 Local test command: python -m unittest discover -s tests -v  
-GitHub Actions run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325) passed on revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37`: compile succeeded, all 45 deterministic tests passed in 1.579 seconds, and the built wheel was verified to contain the runtime modules and all three JSON Schemas. The wheel-content CI step was introduced at `96e15c9f73bafa8e0b8a5d22999463766a6c93f2`. The provider environment-boundary regression also passed: direct adapter construction remains keyless and live-disabled even when environment values are set. Live GPT remained disabled and no provider request was sent.
+Post-merge GitHub Actions run [#54](https://github.com/Loofy147/Za3im/actions/runs/38074954353) passed on main merge commit `e78969af792b6f78f543c1b79a637a9d888572e0`: compile succeeded, all 45 deterministic tests passed in 1.545 seconds, and the built wheel was verified to contain the runtime modules and all three JSON Schemas. Feature-head run [#53](https://github.com/Loofy147/Za3im/actions/runs/38074908427) also passed. The provider environment-boundary regression passed: direct adapter construction remains keyless and live-disabled even when environment values are set. Live GPT remained disabled and no provider request was sent.
 
 ## Foundation iteration: failures and corrections
 
