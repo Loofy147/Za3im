@@ -1,53 +1,48 @@
 {
   "schema_version": "za3im.execution.request/0.1",
-  "execution_id": "exec_demo_00000001",
-  "tenant_id": "tenant_synthetic_01",
-  "project_id": "project_synthetic_salon",
-  "task_id": "task_synthetic_site",
+  "execution_id": "exec-doc-synthetic-001",
+  "tenant_id": "tenant-test-01",
+  "project_id": "project-test-01",
+  "task_id": "task-business-presence-01",
   "parent_execution_id": null,
-  "idempotency_key": "idem-demo-00000001",
-  "trace_id": "trace-demo-00000001",
-  "objective": "Create a test-only website draft and promotional copy for a fictional barbershop. Do not publish or spend money.",
+  "idempotency_key": "idem-doc-synthetic-001",
+  "trace_id": "trace-test-01",
+  "objective": "Create a draft website and promotional copy for this fictional business.",
   "locale": "ar-DZ",
   "acceptance_criteria": [
-    {
-      "criterion_id": "site-files-exist",
-      "description": "A website artifact is produced and stored with a SHA-256 content hash.",
-      "verification_method": "schema"
-    },
-    {
-      "criterion_id": "external-actions-blocked",
-      "description": "No publication, advertising spend, or customer messages are performed.",
-      "verification_method": "automated_test"
-    }
+    {"criterion_id": "website-valid", "description": "Generate a valid HTML draft with a SHA-256 hash.", "verification_method": "automated_test"},
+    {"criterion_id": "no-external-effects", "description": "Do not publish or spend advertising money.", "verification_method": "automated_test"}
   ],
   "context_references": [],
   "capabilities": [
-    { "capability_id": "website.generate-draft", "version_constraint": "^0.1", "input_reference_ids": [] },
-    { "capability_id": "marketing.copy.generate", "version_constraint": "^0.1", "input_reference_ids": [] }
+    {"capability_id": "website.generate-draft", "version_constraint": "^0.1", "input_reference_ids": []},
+    {"capability_id": "marketing.copy.generate", "version_constraint": "^0.1", "input_reference_ids": []}
   ],
   "constraints": {
-    "deadline_at": "2026-10-10T16:00:00+01:00",
-    "max_runtime_seconds": 900,
-    "max_tool_calls": 30,
-    "max_steps": 40,
+    "deadline_at": null,
+    "max_runtime_seconds": 120,
+    "max_tool_calls": 5,
+    "max_steps": 5,
     "data_classification": "confidential",
     "approval_mode": "external_actions",
     "network_policy": "allowlist_only",
-    "allowed_capability_ids": ["website.generate-draft", "marketing.copy.generate", "artifact.write"],
-    "allowed_domain_names": [],
+    "allowed_capability_ids": ["website.generate-draft", "marketing.copy.generate", "artifact.write", "provider.openai.responses"],
+    "allowed_domain_names": ["api.openai.com"],
     "allowed_model_providers": ["openai"],
     "allow_subdelegation": false
   },
-  "budget": {
-    "max_provider_cost_usd": 2.0,
-    "max_customer_credits": 500,
-    "max_external_spend": 0,
-    "external_spend_currency": "DZD"
+  "budget": {"max_provider_cost_usd": 0.01, "max_customer_credits": 100, "max_external_spend": 0, "external_spend_currency": "DZD"},
+  "created_at": "2026-10-10T14:00:00Z",
+  "input_payload": {
+    "business_profile": {
+      "business_name": "صالون تجريبي",
+      "wilaya": "Blida",
+      "service_category": "barbershop",
+      "business_description": "A fictional local barbershop used for tests.",
+      "languages": ["ar-DZ", "fr-DZ"],
+      "contact_preferences": {"preferred_channels": ["phone", "website_form"], "public_phone": "+213555000000"},
+      "data_classification": "confidential"
+    }
   },
-  "created_at": "2026-10-10T15:00:00+01:00",
-  "metadata": {
-    "test_case": "synthetic_vertical_slice",
-    "environment": "sandbox"
-  }
+  "metadata": {"test_case": "synthetic"}
 }
