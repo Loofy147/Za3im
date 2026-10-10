@@ -113,7 +113,7 @@ def _normalize_phone(value: object) -> str | None:
     if not isinstance(value, str):
         return None
     raw = value.strip()
-    if not raw or ("+" in raw and not raw.startswith("+")):
+    if not raw or raw.count("+") > 1 or ("+" in raw and not raw.startswith("+")):
         return None
     if not all(ch.isdecimal() or ch.isspace() or ch in "+().-" for ch in raw):
         return None
