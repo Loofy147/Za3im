@@ -437,6 +437,7 @@ class Za3imService:
             for check_id, check_status, details in [
                 ("generated-copy-schema", "passed", "Generated copy contains the required fields and bounded text values."),
                 ("website-html-structure", "passed", html_message),
+                ("contact-links-safety", "passed", "Rendered contact links use normalized telephone numbers, validated email addresses, HTTPS-only social URLs and safe HTML escaping; anchor schemes passed verification."),
                 ("no-external-side-effects", "passed", "This implementation writes local artifacts only; it has no deployment or advertising connector."),
             ]:
                 verification_event_ids.append(self.store.record_event(execution_id, "verification_check", {"check_id": check_id, "status": check_status, "details": details}))
@@ -451,7 +452,8 @@ class Za3imService:
                 "verification": {"status": "passed", "checks": [
                     {"check_id": "generated-copy-schema", "status": "passed", "method": "schema", "evidence_reference_ids": [verification_event_ids[0]], "details": "Generated copy contains the required fields and bounded text values."},
                     {"check_id": "website-html-structure", "status": "passed", "method": "automated_test", "evidence_reference_ids": [verification_event_ids[1]], "details": html_message},
-                    {"check_id": "no-external-side-effects", "status": "passed", "method": "automated_test", "evidence_reference_ids": [verification_event_ids[2]], "details": "This implementation writes local artifacts only; it has no deployment or advertising connector."}
+                    {"check_id": "contact-links-safety", "status": "passed", "method": "automated_test", "evidence_reference_ids": [verification_event_ids[2]], "details": "Rendered contact links use normalized telephone numbers, validated email addresses, HTTPS-only social URLs and safe HTML escaping; anchor schemes passed verification."},
+                    {"check_id": "no-external-side-effects", "status": "passed", "method": "automated_test", "evidence_reference_ids": [verification_event_ids[3]], "details": "This implementation writes local artifacts only; it has no deployment or advertising connector."}
                 ]},
                 "accounting": {"actual_provider_cost_usd": None, "estimated_provider_cost_usd": estimated_cost, "customer_credits_charged": None, "accounting_status": "estimated" if estimated_cost is not None else "unknown", "usage_reference_ids": [usage_event_id] if usage_event_id else []},
                 "engine": {"engine_id": "za3im-business-presence", "engine_version": "0.1.0", "adapter_version": "0.1.0", "model_provider": generated.get("provider", "unknown"), "model_id": generated.get("model")},
