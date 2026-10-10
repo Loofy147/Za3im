@@ -1,21 +1,18 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://za3im.example/schemas/business-profile-0.1.json",
-  "title": "Za3im Synthetic Business Profile",
-  "description": "Minimal illustrative inputs for a portable Algerian business-presence experience. Validate operational or legal facts separately against source-backed data.",
+  "title": "Za3im Business Profile Input",
   "type": "object",
   "additionalProperties": false,
   "required": ["business_name", "wilaya", "service_category", "contact_preferences"],
   "properties": {
     "business_name": { "type": "string", "minLength": 1, "maxLength": 200 },
-    "wilaya": { "type": "string", "minLength": 1, "maxLength": 100, "description": "Use a controlled wilaya identifier in production; this field is a display placeholder." },
+    "wilaya": { "type": "string", "minLength": 1, "maxLength": 100 },
     "service_category": { "type": "string", "minLength": 1, "maxLength": 200 },
     "business_description": { "type": ["string", "null"], "maxLength": 4000 },
     "languages": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["ar-DZ", "ar", "fr-DZ", "fr", "en"] }, "default": ["ar-DZ", "fr-DZ"] },
     "contact_preferences": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["preferred_channels"],
+      "type": "object", "additionalProperties": false, "required": ["preferred_channels"],
       "properties": {
         "preferred_channels": { "type": "array", "uniqueItems": true, "items": { "type": "string", "enum": ["phone", "whatsapp", "email", "website_form", "social"] } },
         "public_phone": { "type": ["string", "null"], "maxLength": 40 },
