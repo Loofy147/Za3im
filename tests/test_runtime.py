@@ -10,6 +10,7 @@ from http.client import HTTPConnection
 from http.server import ThreadingHTTPServer
 from tempfile import TemporaryDirectory
 from threading import Thread
+from unittest.mock import patch
 
 from za3im_runtime.api import make_handler
 from za3im_runtime.provider import OpenAIResponsesClient, ProviderError
@@ -138,6 +139,18 @@ class ProviderContractTests(unittest.TestCase):
         self.assertEqual(result["request_id"], "resp_test_01")
         self.assertEqual(result["usage"]["total_tokens"], 30)
         self.assertEqual(result["content"]["site_title"], "Title")
+
+    def test_provider_does_not_read_environment_outside_runtime_config(self):
+        with patch.dict(os.environ, {
+            "OPENAI_API_KEY": "env-key-should-not-be-read",
+            "ZA3IM_OPENAI_MODEL": "env-model-should-not-be-read",
+            "ZA3IM_ENABLE_LIVE_GPT": "true",
+        }):
+            client = OpenAIResponsesClient()
+
+        self.assertEqual(client.api_key, "")
+        self.assertEqual(client.model, "gpt-6-luna")
+        self.assertFalse(client.live_enabled)
 
     def test_provider_requires_api_key_without_making_network_call(self):
         client = OpenAIResponsesClient(api_key="", model="test-model", live_enabled=True)
