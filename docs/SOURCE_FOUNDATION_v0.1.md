@@ -1,7 +1,7 @@
 # Za3im source foundation v0.1
 
 Date: 2026-10-10  
-Status: implementation in progress; do not start context or dataset ingestion until the foundation PR and exact main revision pass CI.
+Status: executable source and tests pass on revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37` (CI run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325)); merge is pending final PR-head and post-merge CI. Do not start context or dataset ingestion until the merged main revision passes CI.
 
 ## Objective
 
@@ -54,12 +54,12 @@ HTTP/API composition root
 
 ## Foundation acceptance gate before context/data work
 
-- [ ] Exact feature-head source passes the complete GitHub Actions suite.
-- [ ] Runtime configuration is proven to reach server, provider, service and request-body limit through an integration test.
-- [ ] Capability registry invariants and workflow composition pass tests.
-- [ ] OpenAI provider and SQLite store satisfy the shared port contracts.
-- [ ] All JSON schemas validate as Draft 2020-12 schemas; committed synthetic request/result examples validate against them.
-- [ ] Live GPT remains off; no external calls are required in CI.
-- [ ] Implementation ledger records exact tested commit, test count and failures; only then merge to main.
+- [x] Executable/test revision `b6bb2eb58ac257b4f7c5e691d934544c8cec7c37` passes full CI run [#51](https://github.com/Loofy147/Za3im/actions/runs/38074819325); the final PR-head and post-merge main revisions still require their own CI runs.
+- [x] Runtime configuration reaches server, provider, service and request-body limit through an integration test.
+- [x] Capability registry invariants and workflow composition pass tests.
+- [x] OpenAI provider and SQLite store satisfy the shared port contracts.
+- [x] All JSON schemas validate as Draft 2020-12 schemas; committed synthetic request/result examples validate against them.
+- [x] Live GPT remains off; no external calls are required in CI.
+- [x] Implementation ledger records the exact tested source revision, test count, wheel inspection and resolved failures.
 
 After the gate passes, the next stage is an inventory-first context/data architecture: dataset catalog, source/license/freshness/provenance records, typed connector contracts, retrieval contract, cache policy and evidence-bearing query results. Do not ingest datasets before this gate is closed.
