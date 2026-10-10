@@ -14,6 +14,7 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Business profile schema validation | UNIT_TESTED | Invalid profile rejected before provider call |
 | OpenAI Responses client | UNIT_TESTED / LIVE_NOT_RUN | Mocked transport validates endpoint, JSON mode, output parsing, request ID and token usage |
 | Website draft generation | UNIT_TESTED | Static HTML generated from validated model copy; Arabic RTL support; HTML text escaping |
+| Contact-channel renderer | IMPLEMENTED / CI_PENDING | Registered `website.contact-channels.render`; phone/WhatsApp normalization, validated email, HTTPS-only social links, channel preference gating, escaped address and anchor-scheme verification; four new regression tests awaiting branch CI |
 | Promotional-copy artifact | UNIT_TESTED | Markdown draft produced alongside the HTML |
 | SQLite execution/event/artifact ledger | UNIT_TESTED | Transactional idempotency claim, durable rows and event references |
 | Idempotency | UNIT_TESTED | Exact retry replays result; same key with modified request gets 409 |
@@ -25,10 +26,10 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Local HTTP flow | UNIT_TESTED | Test starts a real local HTTP server and calls health, execute and artifact routes |
 | Event/evidence references | UNIT_TESTED | Returned event references point to persisted events |
 | Wheel contents | LOCALLY_VERIFIED | Local wheel built with pip wheel --no-deps --no-build-isolation; runtime modules and schemas included |
-| CI workflow | CONFIGURED_NOT_RUN_ON_GITHUB | GitHub Actions workflow added; inspect run for exact committed SHA |
+| CI workflow | BASELINE_PASS / FEATURE_CI_PENDING | Baseline 17-test suite passed on `258c975eb392a1a7238af082e398596337d01e87`; this feature branch must pass all new tests on its exact revision before promotion |
 
 Local test command: python -m unittest discover -s tests -v  
-Observed result before the live-GPT gate change: 15 tests passed. The suite now contains 17 tests, including direct assertions that live GPT is blocked before network access and before an execution is claimed. GitHub Actions passed the 17-test suite on revision 258c975eb392a1a7238af082e398596337d01e87. The documentation update will trigger a fresh run for its own revision. Request, business-profile, result and example JSON validation passed. A local wheel was built and included the three JSON schema resources.
+Baseline evidence: 17 deterministic tests passed on revision `258c975eb392a1a7238af082e398596337d01e87`, including checks that live GPT remains blocked before network access and execution claim. The contact-channel feature adds four end-to-end regression tests; feature-branch CI is required before this ledger can promote the capability to UNIT_TESTED. Request, business-profile, result and example JSON validation passed on the baseline; the updated example contract must be checked on the feature revision. A local wheel was built and included the three JSON schema resources.
 
 ## OpenAI integration status
 
