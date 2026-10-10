@@ -14,7 +14,7 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Business profile schema validation | UNIT_TESTED | Invalid profile rejected before provider call |
 | OpenAI Responses client | UNIT_TESTED / LIVE_NOT_RUN | Mocked transport validates endpoint, JSON mode, output parsing, request ID and token usage |
 | Website draft generation | UNIT_TESTED | Static HTML generated from validated model copy; Arabic RTL support; HTML text escaping |
-| Contact-channel renderer | UNIT_TESTED | Registered `website.contact-channels.render`; phone/WhatsApp normalization, validated email, HTTPS-only social links, channel preference gating, escaped address and anchor-scheme verification; four end-to-end regressions passed in CI run [#20](https://github.com/Loofy147/Za3im/actions/runs/38063950271) on exact source revision `09b5c5b9c1ea48702fa34e816968f2513a996818` |
+| Contact-channel renderer | UNIT_TESTED | Registered `website.contact-channels.render`; preference-gated phone/WhatsApp/email/social links, escaped public address, unsafe-scheme rejection, malformed-number rejection, and explicit provider-input allowlist excluding contact/reference fields; six feature regressions passed in CI run [#24](https://github.com/Loofy147/Za3im/actions/runs/38064114962) on source revision `2fc14cac3adc5f4783cada2e372d8cf04710f01a` |
 | Promotional-copy artifact | UNIT_TESTED | Markdown draft produced alongside the HTML |
 | SQLite execution/event/artifact ledger | UNIT_TESTED | Transactional idempotency claim, durable rows and event references |
 | Idempotency | UNIT_TESTED | Exact retry replays result; same key with modified request gets 409 |
@@ -26,10 +26,10 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | Local HTTP flow | UNIT_TESTED | Test starts a real local HTTP server and calls health, execute and artifact routes |
 | Event/evidence references | UNIT_TESTED | Returned event references point to persisted events |
 | Wheel contents | LOCALLY_VERIFIED | Local wheel built with pip wheel --no-deps --no-build-isolation; runtime modules and schemas included |
-| CI workflow | PASS | GitHub Actions run [#20](https://github.com/Loofy147/Za3im/actions/runs/38063950271) passed compile and all 21 deterministic tests on `09b5c5b9c1ea48702fa34e816968f2513a996818` |
+| CI workflow | PASS | GitHub Actions run [#24](https://github.com/Loofy147/Za3im/actions/runs/38064114962) passed compile and all 23 deterministic tests on `2fc14cac3adc5f4783cada2e372d8cf04710f01a` |
 
 Local test command: python -m unittest discover -s tests -v  
-GitHub Actions run [#20](https://github.com/Loofy147/Za3im/actions/runs/38063950271) passed on source revision `09b5c5b9c1ea48702fa34e816968f2513a996818`: `python -m compileall -q za3im_runtime tests` and `python -m unittest discover -s tests -v` both passed; the suite reported 21 tests in 1.463 seconds. Four added tests cover opt-in contact channels, unsafe URL filtering, Arabic-Indic Algerian phone normalization, and HTML verifier rejection of `javascript:` links. This is deterministic CI evidence, not live-provider evidence. Live GPT stayed disabled, and no provider request was sent. A local wheel was built and included the three JSON schema resources.
+GitHub Actions run [#24](https://github.com/Loofy147/Za3im/actions/runs/38064114962) passed on source revision `2fc14cac3adc5f4783cada2e372d8cf04710f01a`: `python -m compileall -q za3im_runtime tests` and `python -m unittest discover -s tests -v` both passed; the suite reported 23 tests in 1.830 seconds. Six feature regressions cover preference-gated channels, unsafe URL filtering, Arabic-Indic Algerian phone normalization, rejection of `javascript:` links, contact/reference data excluded from model egress, and malformed repeated-plus phone rejection. This is deterministic CI evidence, not live-provider evidence. Live GPT stayed disabled, and no provider request was sent. Subsequent commits only updated README, architecture and this evidence ledger; executable/test files remain code-equivalent to the tested source revision. A local wheel was built and included the three JSON schema resources.
 
 ## OpenAI integration status
 
