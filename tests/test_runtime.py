@@ -126,7 +126,7 @@ class ProviderContractTests(unittest.TestCase):
             }
             return FakeHTTPResponse(json.dumps(response).encode("utf-8"))
 
-        client = OpenAIResponsesClient(api_key="test-key", model="test-model", urlopen=fake_urlopen)
+        client = OpenAIResponsesClient(api_key="test-key", model="test-model", urlopen=fake_urlopen, live_enabled=True)
         result = client.generate_copy({"business_name":"Test","wilaya":"Blida","service_category":"salon"}, max_output_tokens=1200)
         self.assertEqual(captured["url"], "https://api.openai.com/v1/responses")
         self.assertEqual(captured["payload"]["model"], "test-model")
@@ -136,9 +136,19 @@ class ProviderContractTests(unittest.TestCase):
         self.assertEqual(result["content"]["site_title"], "Title")
 
     def test_provider_requires_api_key_without_making_network_call(self):
-        client = OpenAIResponsesClient(api_key="", model="test-model")
+        client = OpenAIResponsesClient(api_key="", model="test-model", live_enabled=True)
         with self.assertRaisesRegex(ProviderError, "OPENAI_API_KEY"):
             client.generate_copy({"business_name":"Test","wilaya":"Blida","service_category":"salon"})
+
+    def test_live_gpt_is_disabled_by_default_even_with_a_key(self):
+        calls = {"count": 0}
+        def unexpected_network_call(req, timeout):
+            calls["count"] += 1
+            raise AssertionError("network transport must not be called while live GPT is disabled")
+        client = OpenAIResponsesClient(api_key="test-key", model="test-model", urlopen=unexpected_network_call, live_enabled=False)
+        with self.assertRaisesRegex(ProviderError, "disabled until finished-product validation"):
+            client.generate_copy({"business_name":"Test","wilaya":"Blida","service_category":"salon"})
+        self.assertEqual(calls["count"], 0)
 
 
 class RuntimeTests(unittest.TestCase):
