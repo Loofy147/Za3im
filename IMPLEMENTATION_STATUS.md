@@ -28,14 +28,14 @@ NOT PRODUCTION READY. The narrow business-presence draft workflow is implemented
 | CI workflow | CONFIGURED_NOT_RUN_ON_GITHUB | GitHub Actions workflow added; inspect run for exact committed SHA |
 
 Local test command: python -m unittest discover -s tests -v  
-Observed result: 15 tests passed. python -m compileall -q za3im_runtime tests passed. Request, business-profile, result and example JSON validation passed. Local wheel built and included all three JSON schema resources. These checks must run again on the exact commit in GitHub Actions.
+Observed result before the live-GPT gate change: 15 tests passed. The suite now contains 17 tests, including direct assertions that live GPT is blocked before network access and before an execution is claimed. GitHub Actions passed the 17-test suite on revision 258c975eb392a1a7238af082e398596337d01e87. The documentation update will trigger a fresh run for its own revision. Request, business-profile, result and example JSON validation passed. A local wheel was built and included the three JSON schema resources.
 
 ## OpenAI integration status
 
 The client is wired to POST https://api.openai.com/v1/responses, OPENAI_API_KEY, and configurable ZA3IM_OPENAI_MODEL (default gpt-6-luna). Live requests are disabled by default through ZA3IM_ENABLE_LIVE_GPT=false. The service returns LIVE_GPT_DISABLED before claiming an execution or touching the network.
 
-- Implemented: executable client and error mapping.
-- Tested: fake HTTP response/contract.
+- Implemented: executable client and error mapping; explicit ZA3IM_ENABLE_LIVE_GPT fail-closed gate (default false).
+- Tested: mocked HTTP response/contract; with live GPT disabled and a configured test key, the injected transport is not called; the service rejects the request before creating an execution record.
 - Not established: real API key/model entitlement, a successful live call, actual latency, output quality, current account-specific rate, and invoice reconciliation.
 - No secret was supplied or written to this repository; no billable live request was made, and no live request is expected before the finished product passes acceptance.
 - Future finished-product validation only: set ZA3IM_ENABLE_LIVE_GPT=true in a controlled environment with an explicitly authorized key after all release gates pass.
@@ -48,7 +48,7 @@ Input/output rates default to GPT-6 Luna standard text-token rates as checked on
 
 | Capability | Status | Evidence required before promotion |
 |---|---|---|
-| Live OpenAI smoke test | DEFERRED_UNTIL_FINISHED_PRODUCT | Only after finished-product acceptance: authorized low-budget request, redacted response ID, model ID, returned usage and failure behavior |
+| Live OpenAI smoke test | DEFERRED_UNTIL_FINISHED_PRODUCT | Do not run during development. Only after finished-product acceptance: an explicitly authorized low-budget request, redacted response ID, model ID, returned usage and failure behavior |
 | Prepared Algerian knowledge connectors | NOT_INTEGRATED | Inventory source, date, coverage, rights and API; test a real query and provenance/freshness |
 | DeerFlow / Agent Zero / OpenManus / OpenHands | CANDIDATE_DISABLED | Pinned revision, license/security review, adapter and contract/conformance tests |
 | Browser Use / Skyvern | CANDIDATE_DISABLED | Same as above plus isolated session, domain control and side-effect validation; Skyvern needs AGPL legal review |
